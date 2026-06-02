@@ -1,16 +1,20 @@
 export const TOOLS = {
   EMOJIS: "emojis",
+  YOUTUBE_PLAYLIST: "youtube-playlist",
+  VIDEO_DOWNLOADER: "video-downloader",
+  CLOUDFLARE_DOCKER: "cloudflare-docker",
   COLORS: "colors",
-  TBD: "tbd",
 };
 
-export const IMPLEMENTED_TOOLS = new Set([TOOLS.EMOJIS]);
-
-const MAX_RECENT_EMOJIS = 12;
+export const IMPLEMENTED_TOOLS = new Set([
+  TOOLS.EMOJIS,
+  TOOLS.YOUTUBE_PLAYLIST,
+  TOOLS.VIDEO_DOWNLOADER,
+  TOOLS.CLOUDFLARE_DOCKER,
+]);
 
 const DEFAULT_SETTINGS = {
   lastTool: null,
-  recentEmojis: [],
 };
 
 function getSettings() {
@@ -18,7 +22,6 @@ function getSettings() {
     chrome.storage.local.get(DEFAULT_SETTINGS, (items) => {
       resolve({
         lastTool: items.lastTool ?? DEFAULT_SETTINGS.lastTool,
-        recentEmojis: items.recentEmojis ?? DEFAULT_SETTINGS.recentEmojis,
       });
     });
   });
@@ -50,16 +53,4 @@ export async function setLastTool(id) {
     throw new Error("Invalid tool id");
   }
   await saveSettings({ lastTool: id });
-}
-
-export async function getRecentEmojis() {
-  const settings = await getSettings();
-  return settings.recentEmojis;
-}
-
-export async function recordEmojiUse(emoji) {
-  const settings = await getSettings();
-  const recent = settings.recentEmojis.filter((item) => item !== emoji);
-  recent.unshift(emoji);
-  await saveSettings({ recentEmojis: recent.slice(0, MAX_RECENT_EMOJIS) });
 }

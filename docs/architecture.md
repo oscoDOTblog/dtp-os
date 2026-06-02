@@ -57,15 +57,22 @@ dtp-os/
 ├── tab_override.html   # New tab shell (layers + controls)
 ├── css/
 │   ├── newtab.css      # New tab layout and settings panel
-│   └── popup.css       # Toolbar popup layout and emoji picker
+│   └── popup.css       # Toolbar popup layout and tools
 ├── js/
-│   ├── storage.js      # IndexedDB wallpaper blobs
-│   ├── wallpapers.js   # CRUD, validation, mode + order in chrome.storage
-│   ├── newtab.js       # UI wiring, random background on load
-│   ├── popup.js        # Popup router: tool list, last-tool restore, navigation
-│   ├── toolSettings.js # lastTool + recentEmojis in chrome.storage.local
-│   ├── emojis.js       # Emoji picker UI, search, copy-to-clipboard
-│   └── emoji-data.js   # Static curated emoji list with search keywords
+│   ├── lib/
+│   │   ├── config.js                 # VIDEO_DL_API_URL (sway-sls Lambda)
+│   │   ├── videodlClient.js          # Async video download API client
+│   │   └── youtubeChannelPlaylist.js # UC → UU playlist URL logic
+│   ├── storage.js           # IndexedDB wallpaper blobs
+│   ├── wallpapers.js        # CRUD, validation, mode + order in chrome.storage
+│   ├── newtab.js            # UI wiring, random background on load
+│   ├── popup.js             # Popup router: tool list, last-tool restore, navigation
+│   ├── toolSettings.js      # lastTool in chrome.storage.local
+│   ├── emojis.js            # Emoji picker UI, search, copy-to-clipboard
+│   ├── emoji-data.js        # Static curated emoji list with search keywords
+│   ├── youtubePlaylist.js   # YouTube uploads playlist tool
+│   ├── videoDownloader.js   # Video downloader tool (Lambda + S3 fetch)
+│   └── cloudflareDocker.js  # Cloudflare docker run converter tool
 ├── assets/             # Extension icons (48, 128) and legacy logo
 ├── docs/               # Technical documentation
 └── README.md           # End-user setup (load unpacked, developer mode)
@@ -79,6 +86,7 @@ There is no build step, bundler, or package manager. The extension is loaded **a
 
 - **Manifest version**: 3 (service worker background, no persistent background page).
 - **Permissions**: `tabs` (service worker tab redirect) and `storage` (display mode, wallpaper index, tool preferences).
+- **Host permissions**: sway-sls video-download API Gateway and `*.amazonaws.com` for signed S3 download URLs (video downloader tool only).
 - **New tab override**: `chrome_url_overrides.newtab` points at `tab_override.html`, which is the primary mechanism for replacing the new tab page.
 - **Toolbar action**: `action.default_popup` points at `popup.html` for the browser-tools launcher.
 - **Icons**: `assets/48.png` and `assets/128.png` for the extension listing and toolbar.
@@ -97,15 +105,20 @@ The new tab page has three layers:
 
 To point the embed at a different home, change the iframe `src` in `tab_override.html`.
 
-### `popup.html`, `css/popup.css`, `js/popup.js`, `js/emojis.js`
+### `popup.html`, `css/popup.css`, `js/popup.js`, tool modules
 
 Clicking the toolbar icon opens a compact popup separate from the new tab page.
 
-1. **Tool list** — Emojis (implemented), Colors and TBD (stubs marked “Soon”).
+1. **Tool list** — Emojis, YouTube Playlist, Video Downloader, and Cloudflare Docker (implemented); Colors (stub marked “Soon”).
 2. **Last-tool restore** — If `lastTool` is set to an implemented tool, the popup opens directly into that tool view.
-3. **Emojis picker** — Search bar, recent-emojis row (hidden while searching), scrollable emoji grid. Clicking an emoji copies it to the clipboard, shows a brief toast, then closes the popup.
+3. **Emojis picker** — Search bar and scrollable emoji grid with client-side filter. Clicking an emoji copies it to the clipboard, shows a brief toast, then closes the popup.
+4. **YouTube Playlist** — Paste channel page source, URL, or `UC...` ID; live-builds uploads playlist URL (`UC` → `UU`); copy and open in YouTube. Client-only (`js/lib/youtubeChannelPlaylist.js`).
+5. **Video Downloader** — Paste a social URL; polls sway-sls Lambda (`js/lib/videodlClient.js`), then fetches the signed file and triggers a browser download.
+6. **Cloudflare Docker** — Paste `docker run ...`; inserts `-d --restart unless-stopped` after `docker run`; copy converted command.
 
-`js/toolSettings.js` persists popup preferences in `chrome.storage.local`. `js/emoji-data.js` ships a static curated emoji list (~1,300 entries) with keyword tags for client-side search — no network calls or build step required.
+Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; `js/popup.js` routes by tool id and runs cleanup when navigating back.
+
+`js/toolSettings.js` persists popup preferences in `chrome.storage.local`. `js/emoji-data.js` ships a static curated emoji list (~1,300 entries) with keyword tags for client-side search.
 
 ### `js/storage.js` and `js/wallpapers.js`
 
@@ -114,8 +127,7 @@ Clicking the toolbar icon opens a compact popup separate from the new tab page.
 | IndexedDB `dtp-os` / `wallpapers` | `id` | `{ id, blob, mimeType, addedAt }` |
 | `chrome.storage.local` | `displayMode` | `"embed"` \| `"wallpaper"` |
 | `chrome.storage.local` | `wallpaperOrder` | `string[]` of IDs (gallery order) |
-| `chrome.storage.local` | `lastTool` | `"emojis"` \| `"colors"` \| `"tbd"` \| unset |
-| `chrome.storage.local` | `recentEmojis` | `string[]` of emoji characters (most recent first, max 12) |
+| `chrome.storage.local` | `lastTool` | `"emojis"` \| `"youtube-playlist"` \| `"video-downloader"` \| `"cloudflare-docker"` \| `"colors"` \| unset |
 
 Upload rules: JPEG/PNG/WebP, max 5 MB per file, max 50 images. `syncWallpaperOrderWithDatabase()` reconciles the order array with IndexedDB on load.
 
@@ -135,9 +147,10 @@ This logic was added to support **Opera and other Chromium browsers** (see commi
 | Permission | Why |
 |------------|-----|
 | `tabs` | Read tab URL on create/update; redirect shared start page tabs to `tab_override.html` |
-| `storage` | Persist `displayMode`, `wallpaperOrder`, `lastTool`, and `recentEmojis` (image bytes live in IndexedDB, not storage quota) |
+| `storage` | Persist `displayMode`, `wallpaperOrder`, and `lastTool` (image bytes live in IndexedDB, not storage quota) |
+| `host_permissions` (API Gateway + `*.amazonaws.com`) | Video Downloader: start/poll Lambda jobs and fetch signed S3 download URLs |
 
-The extension does **not** request `host_permissions`, `scripting`, or broad `<all_urls>` access. It does not inject content scripts into arbitrary pages. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, and clipboard writes from the popup emoji picker (user-initiated only).
+The extension does **not** request `scripting` or broad `<all_urls>` access. It does not inject content scripts into arbitrary pages. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), and outbound `fetch` to the video-download API when the user starts a download.
 
 Users must **keep** the extension’s new-tab override when prompted (“page was changed by … extension”); declining disables the override.
 

@@ -8,3 +8,4 @@
     * [x] emoji pullup (type in emoji and it appears and copies to clipboard)
     * [ ] color swatch picker and hex codes and save color combos 
     * [ ] get local cookies 
+    * [x] the three tools from waifuDOTbond (playlist generation, download video, cloudflare docker)

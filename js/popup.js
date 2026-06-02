@@ -1,4 +1,7 @@
 import { mountEmojisTool } from "./emojis.js";
+import { mountYoutubePlaylistTool } from "./youtubePlaylist.js";
+import { mountVideoDownloaderTool } from "./videoDownloader.js";
+import { mountCloudflareDockerTool } from "./cloudflareDocker.js";
 import {
   getLastTool,
   IMPLEMENTED_TOOLS,
@@ -8,8 +11,10 @@ import {
 
 const TOOL_DEFINITIONS = [
   { id: TOOLS.EMOJIS, label: "Emojis", implemented: true },
+  { id: TOOLS.YOUTUBE_PLAYLIST, label: "YouTube Playlist", implemented: true },
+  { id: TOOLS.VIDEO_DOWNLOADER, label: "Video Downloader", implemented: true },
+  { id: TOOLS.CLOUDFLARE_DOCKER, label: "Cloudflare Docker", implemented: true },
   { id: TOOLS.COLORS, label: "Colors", implemented: false },
-  { id: TOOLS.TBD, label: "TBD", implemented: false },
 ];
 
 const toolListView = document.getElementById("toolListView");
@@ -20,7 +25,14 @@ const toolPanelContent = document.getElementById("toolPanelContent");
 const backButton = document.getElementById("backButton");
 const toast = document.getElementById("toast");
 
-let emojiCleanup = null;
+let panelCleanup = null;
+
+const TOOL_MOUNTERS = {
+  [TOOLS.EMOJIS]: mountEmojisTool,
+  [TOOLS.YOUTUBE_PLAYLIST]: mountYoutubePlaylistTool,
+  [TOOLS.VIDEO_DOWNLOADER]: mountVideoDownloaderTool,
+  [TOOLS.CLOUDFLARE_DOCKER]: mountCloudflareDockerTool,
+};
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -33,11 +45,15 @@ function hideToast() {
   toast.classList.remove("is-error");
 }
 
-function showToolList() {
-  if (emojiCleanup) {
-    emojiCleanup();
-    emojiCleanup = null;
+function runPanelCleanup() {
+  if (panelCleanup) {
+    panelCleanup();
+    panelCleanup = null;
   }
+}
+
+function showToolList() {
+  runPanelCleanup();
   toolPanelView.hidden = true;
   toolListView.hidden = false;
   hideToast();
@@ -49,13 +65,15 @@ function showToolPanel(toolId) {
     return;
   }
 
+  runPanelCleanup();
   toolListView.hidden = true;
   toolPanelView.hidden = false;
   toolPanelTitle.textContent = tool.label;
   toolPanelContent.replaceChildren();
 
-  if (toolId === TOOLS.EMOJIS) {
-    emojiCleanup = mountEmojisTool(toolPanelContent, { showToast, hideToast });
+  const mounter = TOOL_MOUNTERS[toolId];
+  if (mounter) {
+    panelCleanup = mounter(toolPanelContent, { showToast, hideToast });
     return;
   }
 
