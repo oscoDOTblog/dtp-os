@@ -1,15 +1,23 @@
 {
-  "name": "buildspace os",
-  "description": "buildspace os — your new home for nights and weekends",
+  "name": "dtp-os",
+  "description": "dtp-os — new tab home and browser tools",
   "version": "1.0.0",
   "manifest_version": 3,
   "icons": {
     "48": "assets/48.png",
     "128": "assets/128.png"
   },
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "storage"],
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "dtp-os",
+    "default_icon": {
+      "48": "assets/48.png",
+      "128": "assets/128.png"
+    }
   },
   "chrome_url_overrides": {
     "newtab": "tab_override.html"
