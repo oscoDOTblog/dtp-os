@@ -2,12 +2,7 @@ import { mountEmojisTool } from "./emojis.js";
 import { mountYoutubePlaylistTool } from "./youtubePlaylist.js";
 import { mountVideoDownloaderTool } from "./videoDownloader.js";
 import { mountCloudflareDockerTool } from "./cloudflareDocker.js";
-import {
-  getLastTool,
-  IMPLEMENTED_TOOLS,
-  setLastTool,
-  TOOLS,
-} from "./toolSettings.js";
+import { TOOLS } from "./toolSettings.js";
 
 const TOOL_DEFINITIONS = [
   { id: TOOLS.EMOJIS, label: "Emojis", implemented: true },
@@ -83,12 +78,11 @@ function showToolPanel(toolId) {
   toolPanelContent.appendChild(stub);
 }
 
-async function openTool(toolId) {
+function openTool(toolId) {
   const tool = TOOL_DEFINITIONS.find((item) => item.id === toolId);
   if (!tool || !tool.implemented) {
     return;
   }
-  await setLastTool(toolId);
   showToolPanel(toolId);
 }
 
@@ -136,13 +130,8 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-async function init() {
+function init() {
   renderToolList();
-  const lastTool = await getLastTool();
-  if (lastTool && IMPLEMENTED_TOOLS.has(lastTool)) {
-    showToolPanel(lastTool);
-    return;
-  }
   showToolList();
 }
 

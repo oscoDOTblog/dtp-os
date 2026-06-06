@@ -1,5 +1,4 @@
 import { downloadVideoAsync } from "./lib/videodlClient.js";
-import { setLastTool, TOOLS } from "./toolSettings.js";
 
 const PROGRESS_BY_STATUS = {
   starting: 5,
@@ -212,8 +211,6 @@ export function mountVideoDownloaderTool(container, { showToast }) {
     const filename = `${platform}-${Date.now()}.${format}`;
 
     try {
-      await setLastTool(TOOLS.VIDEO_DOWNLOADER);
-
       const result = await downloadVideoAsync(url, true, (status) => {
         if (!abortRequested) applyStatus(status);
       }, format);

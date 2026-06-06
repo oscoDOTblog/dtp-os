@@ -1,5 +1,4 @@
 import { buildUploadsPlaylistFromInput } from "./lib/youtubeChannelPlaylist.js";
-import { setLastTool, TOOLS } from "./toolSettings.js";
 
 const HELP_PANEL_ID = "youtube-playlist-help";
 
@@ -167,7 +166,6 @@ export function mountYoutubePlaylistTool(container, { showToast }) {
       playlistOut.value = result.playlistUrl;
       openLink.href = result.playlistUrl;
       outputsWrap.hidden = false;
-      setLastTool(TOOLS.YOUTUBE_PLAYLIST);
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;

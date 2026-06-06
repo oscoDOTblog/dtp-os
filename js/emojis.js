@@ -1,5 +1,4 @@
 import { EMOJI_LIST } from "./emoji-data.js";
-import { setLastTool, TOOLS } from "./toolSettings.js";
 
 const TOAST_MS = 400;
 
@@ -50,7 +49,6 @@ export function mountEmojisTool(container, { showToast }) {
   async function handleEmojiSelect(emoji) {
     try {
       await navigator.clipboard.writeText(emoji);
-      await setLastTool(TOOLS.EMOJIS);
       showToast("Copied!");
       window.setTimeout(() => {
         window.close();

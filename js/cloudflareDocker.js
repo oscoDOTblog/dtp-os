@@ -1,5 +1,3 @@
-import { setLastTool, TOOLS } from "./toolSettings.js";
-
 function convertCommand(command) {
   const trimmed = command.trim();
 
@@ -117,7 +115,6 @@ export function mountCloudflareDockerTool(container, { showToast }) {
       outputCommand = convertCommand(value);
       output.value = outputCommand;
       outputWrap.hidden = false;
-      setLastTool(TOOLS.CLOUDFLARE_DOCKER);
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
