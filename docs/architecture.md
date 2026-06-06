@@ -65,6 +65,9 @@ dtp-os/
 │   │   └── youtubeChannelPlaylist.js # UC → UU playlist URL logic
 │   ├── storage.js           # IndexedDB wallpaper blobs
 │   ├── wallpapers.js        # CRUD, validation, mode + order in chrome.storage
+│   ├── appSettings.js       # App name + custom greetings in chrome.storage
+│   ├── defaultGreetings.js  # Built-in rotating new-tab messages
+│   ├── settingsTool.js      # Settings / branding UI for popup and new tab
 │   ├── newtab.js            # UI wiring, random background on load
 │   ├── popup.js             # Popup router: tool list and navigation
 │   ├── toolSettings.js      # Shared tool id constants
@@ -163,7 +166,7 @@ Users must **keep** the extension’s new-tab override when prompted (“page wa
 ## Customization checklist
 
 1. **Home URL** — Edit iframe `src` in `tab_override.html`.
-2. **Branding** — Update `name`, `description`, and icons in `manifest.json`; replace files under `assets/`.
+2. **Branding** — Set app name and optional custom greetings (JSON array) via the center **Settings** modal on the new tab (gear icon) or **Settings** in the toolbar popup. Empty greetings use 105 built-in rotating messages. Update `name`, `description`, and icons in `manifest.json` for the extension listing itself.
 3. **Styling** — Edit `css/newtab.css` (background layer, controls panel).
 4. **Shared start page** — If a browser uses a different internal URL prefix, extend the `startsWith(...)` check in `background.js`.
 

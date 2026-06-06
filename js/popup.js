@@ -1,10 +1,13 @@
+import { getAppName } from "./appSettings.js";
 import { mountEmojisTool } from "./emojis.js";
 import { mountYoutubePlaylistTool } from "./youtubePlaylist.js";
 import { mountVideoDownloaderTool } from "./videoDownloader.js";
 import { mountCloudflareDockerTool } from "./cloudflareDocker.js";
+import { mountSettingsTool } from "./settingsTool.js";
 import { TOOLS } from "./toolSettings.js";
 
 const TOOL_DEFINITIONS = [
+  { id: TOOLS.SETTINGS, label: "Settings", implemented: true },
   { id: TOOLS.EMOJIS, label: "Emojis", implemented: true },
   { id: TOOLS.YOUTUBE_PLAYLIST, label: "YouTube Playlist", implemented: true },
   { id: TOOLS.VIDEO_DOWNLOADER, label: "Video Downloader", implemented: true },
@@ -22,7 +25,10 @@ const toast = document.getElementById("toast");
 
 let panelCleanup = null;
 
+const popupTitle = document.querySelector(".popup-title");
+
 const TOOL_MOUNTERS = {
+  [TOOLS.SETTINGS]: mountSettingsTool,
   [TOOLS.EMOJIS]: mountEmojisTool,
   [TOOLS.YOUTUBE_PLAYLIST]: mountYoutubePlaylistTool,
   [TOOLS.VIDEO_DOWNLOADER]: mountVideoDownloaderTool,
@@ -130,9 +136,17 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+async function applyAppName() {
+  if (!popupTitle) {
+    return;
+  }
+  popupTitle.textContent = await getAppName();
+}
+
 function init() {
   renderToolList();
   showToolList();
+  applyAppName().catch(() => {});
 }
 
 init();

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>dtp-os</title>
+    <link rel="icon" type="image/png" sizes="48x48" href="assets/48.png">
     <link rel="stylesheet" href="css/newtab.css">
 </head>
 
@@ -13,6 +14,11 @@
 
     <div id="embedLayer" class="container is-visible">
         <iframe src="https://buildspace.so/home" title="Embedded home"></iframe>
+    </div>
+
+    <div id="greetingLayer" class="greeting-layer" aria-live="polite">
+        <h1 id="appNameDisplay" class="greeting-app-name">dtp-os</h1>
+        <p id="greetingMessage" class="greeting-message"></p>
     </div>
 
     <button
@@ -28,30 +34,48 @@
         type="button"
         id="controlsToggle"
         class="controls-toggle"
-        aria-label="Open wallpaper settings"
+        aria-label="Open settings"
         aria-expanded="false"
-        aria-controls="controls"
+        aria-controls="settingsModal"
     >⚙</button>
 
-    <aside id="controls" hidden>
-        <h2 class="controls-header">Wallpapers</h2>
-        <p class="controls-hint">
-            Upload backgrounds and switch modes. In wallpaper mode, a random saved image appears each time you open a new tab. Use the shuffle button to change the background on this tab.
-        </p>
+    <div id="settingsModal" class="settings-modal" hidden>
+        <div id="settingsBackdrop" class="settings-backdrop"></div>
 
-        <div class="mode-toggle" role="group" aria-label="Display mode">
-            <button type="button" id="modeWallpaper">Wallpaper</button>
-            <button type="button" id="modeEmbed" class="is-active">Embedded site</button>
+        <div
+            class="settings-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settingsDialogTitle"
+        >
+            <button
+                type="button"
+                id="settingsCloseBtn"
+                class="settings-close-btn"
+                aria-label="Close settings"
+            >×</button>
+
+            <section id="settingsListView" class="settings-view">
+                <h2 id="settingsDialogTitle" class="settings-title">Settings</h2>
+                <ul id="settingsList" class="settings-list" role="list"></ul>
+            </section>
+
+            <section id="settingsPanelView" class="settings-view" hidden>
+                <header class="settings-panel-header">
+                    <button
+                        type="button"
+                        id="settingsBackBtn"
+                        class="settings-back-btn"
+                        aria-label="Back to settings"
+                    >←</button>
+                    <h2 id="settingsPanelTitle" class="settings-panel-title"></h2>
+                </header>
+                <div id="settingsPanelContent" class="settings-panel-content"></div>
+            </section>
+
+            <p id="statusMessage" class="settings-status" role="status" aria-live="polite"></p>
         </div>
-
-        <label class="upload-label" for="fileInput">Upload images (JPEG, PNG, WebP)</label>
-        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple>
-
-        <p id="galleryMeta" class="gallery-meta">0 saved · random on each new tab</p>
-        <div id="gallery"></div>
-
-        <p id="statusMessage" role="status" aria-live="polite"></p>
-    </aside>
+    </div>
 
     <script type="module" src="js/newtab.js"></script>
 </body>

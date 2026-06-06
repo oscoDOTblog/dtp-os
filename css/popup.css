@@ -534,3 +534,208 @@ body {
 .tool-file-size[hidden] {
   display: none;
 }
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(245, 245, 245, 0.65);
+}
+
+.settings-panel .tool-label {
+  margin-top: 0.25rem;
+}
+
+.settings-panel .tool-btn-primary {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+}
+
+.branding-enable-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(255, 105, 180, 0.35);
+  border-radius: 0.375rem;
+  background: rgba(255, 105, 180, 0.08);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.branding-enable-input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #ff69b4;
+  cursor: pointer;
+}
+
+.branding-fields.is-disabled {
+  opacity: 0.45;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.settings-help-toggle {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid rgba(255, 105, 180, 0.4);
+  border-radius: 50%;
+  background: rgba(255, 105, 180, 0.12);
+  color: #ff69b4;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.settings-help-toggle:hover:not(:disabled),
+.settings-help-toggle:focus-visible:not(:disabled) {
+  border-color: #ff69b4;
+  outline: none;
+}
+
+.settings-help-panel {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(255, 105, 180, 0.25);
+  border-radius: 0.375rem;
+  background: rgba(255, 105, 180, 0.06);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(245, 245, 245, 0.85);
+}
+
+.settings-help-panel[hidden] {
+  display: none;
+}
+
+.settings-help-panel h3 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.8rem;
+  color: #ff69b4;
+}
+
+.settings-help-panel h3:first-child {
+  margin-top: 0;
+}
+
+.settings-help-panel p,
+.settings-help-panel ol {
+  margin: 0.25rem 0;
+}
+
+.settings-help-panel code {
+  color: #ffb6d9;
+  font-size: 0.7rem;
+}
+
+.settings-help-code {
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.375rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffb6d9;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.settings-help-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.settings-help-prompt-label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(245, 245, 245, 0.85);
+}
+
+.settings-help-copy-btn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid rgba(255, 105, 180, 0.45);
+  border-radius: 0.375rem;
+  background: rgba(255, 105, 180, 0.12);
+  color: #ff69b4;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settings-help-copy-btn:hover,
+.settings-help-copy-btn:focus-visible {
+  border-color: #ff69b4;
+  background: rgba(255, 105, 180, 0.22);
+  outline: none;
+}
+
+.field-label {
+  display: block;
+  margin: 0.5rem 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(245, 245, 245, 0.65);
+}
+
+.field-input,
+.field-textarea {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f5f5;
+  font-size: 0.8rem;
+  font-family: inherit;
+}
+
+.field-textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.field-input:focus,
+.field-textarea:focus {
+  border-color: #ff69b4;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
+}
+
+.field-save-btn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid rgba(255, 105, 180, 0.5);
+  border-radius: 0.375rem;
+  background: rgba(255, 105, 180, 0.15);
+  color: #ff69b4;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.field-save-btn:hover,
+.field-save-btn:focus-visible {
+  background: rgba(255, 105, 180, 0.28);
+  outline: none;
+}

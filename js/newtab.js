@@ -9,22 +9,28 @@ import {
   setDisplayMode,
   syncWallpaperOrderWithDatabase,
 } from "./wallpapers.js";
+import { getAppName, getActiveGreetings, getBrandingEnabled, pickRandomGreeting, DEFAULT_APP_NAME } from "./appSettings.js";
+import { mountBrandingPanel } from "./settingsTool.js";
+import { initNewtabSettings } from "./newtabSettings.js";
 
 const backgroundLayer = document.getElementById("backgroundLayer");
 const embedLayer = document.getElementById("embedLayer");
-const controlsPanel = document.getElementById("controls");
-const controlsToggle = document.getElementById("controlsToggle");
-const fileInput = document.getElementById("fileInput");
-const gallery = document.getElementById("gallery");
-const galleryMeta = document.getElementById("galleryMeta");
+const appNameDisplay = document.getElementById("appNameDisplay");
+const greetingMessage = document.getElementById("greetingMessage");
+const greetingLayer = document.getElementById("greetingLayer");
 const statusMessage = document.getElementById("statusMessage");
-const modeWallpaperBtn = document.getElementById("modeWallpaper");
-const modeEmbedBtn = document.getElementById("modeEmbed");
 const shuffleBtn = document.getElementById("shuffleBtn");
 
 let activeObjectUrl = null;
 let currentWallpaperId = null;
+let currentGreeting = "";
 const galleryObjectUrls = new Set();
+
+let modeWallpaperBtn = null;
+let modeEmbedBtn = null;
+let fileInput = null;
+let gallery = null;
+let galleryMeta = null;
 
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
@@ -59,8 +65,7 @@ async function setBackgroundFromId(id) {
 }
 
 function updateShuffleButton(mode, wallpaperCount) {
-  const show =
-    mode === DISPLAY_MODES.WALLPAPER && wallpaperCount > 0;
+  const show = mode === DISPLAY_MODES.WALLPAPER && wallpaperCount > 0;
   shuffleBtn.hidden = !show;
 }
 
@@ -70,8 +75,11 @@ function applyMode(mode, wallpaperCount = 0) {
   embedLayer.classList.toggle("is-visible", !isWallpaper);
   backgroundLayer.setAttribute("aria-hidden", isWallpaper ? "false" : "true");
 
-  modeWallpaperBtn.classList.toggle("is-active", isWallpaper);
-  modeEmbedBtn.classList.toggle("is-active", !isWallpaper);
+  if (modeWallpaperBtn && modeEmbedBtn) {
+    modeWallpaperBtn.classList.toggle("is-active", isWallpaper);
+    modeEmbedBtn.classList.toggle("is-active", !isWallpaper);
+  }
+
   updateShuffleButton(mode, wallpaperCount);
 }
 
@@ -85,7 +93,11 @@ async function loadRandomWallpaperIfNeeded(mode) {
 
   const id = await pickRandomWallpaperId(currentWallpaperId);
   if (id) {
+    const previousId = currentWallpaperId;
     await setBackgroundFromId(id);
+    if (id !== previousId) {
+      await rotateGreeting();
+    }
   } else {
     revokeActiveObjectUrl();
     backgroundLayer.style.backgroundImage = "";
@@ -106,10 +118,14 @@ async function shuffleWallpaper() {
   }
 
   await setBackgroundFromId(id);
-  setStatus("Shuffled.");
+  await rotateGreeting();
 }
 
 function renderGallery(items) {
+  if (!gallery || !galleryMeta) {
+    return;
+  }
+
   revokeGalleryUrls();
   gallery.innerHTML = "";
 
@@ -200,29 +216,62 @@ async function handleFilesSelected(fileList) {
     if (mode === DISPLAY_MODES.WALLPAPER) {
       await loadRandomWallpaperIfNeeded(mode);
     }
-    setStatus(
-      added === 1 ? "Wallpaper added." : `${added} wallpapers added.`
-    );
+    setStatus(added === 1 ? "Wallpaper added." : `${added} wallpapers added.`);
   }
 
-  fileInput.value = "";
+  if (fileInput) {
+    fileInput.value = "";
+  }
 }
 
-function wireControls() {
-  controlsToggle.addEventListener("click", () => {
-    const isHidden = controlsPanel.hasAttribute("hidden");
-    if (isHidden) {
-      controlsPanel.removeAttribute("hidden");
-      controlsToggle.setAttribute("aria-expanded", "true");
-    } else {
-      controlsPanel.setAttribute("hidden", "");
-      controlsToggle.setAttribute("aria-expanded", "false");
-    }
-  });
+function mountWallpaperPanel(container) {
+  const panel = document.createElement("div");
+  panel.className = "settings-section-panel";
 
-  fileInput.addEventListener("change", () => {
-    handleFilesSelected(fileInput.files);
-  });
+  const hint = document.createElement("p");
+  hint.className = "settings-section-hint";
+  hint.textContent =
+    "Upload backgrounds and switch modes. In wallpaper mode, a random saved image appears each time you open a new tab. Use the shuffle button to change the background on this tab.";
+
+  const modeToggle = document.createElement("div");
+  modeToggle.className = "mode-toggle";
+  modeToggle.setAttribute("role", "group");
+  modeToggle.setAttribute("aria-label", "Display mode");
+
+  modeWallpaperBtn = document.createElement("button");
+  modeWallpaperBtn.type = "button";
+  modeWallpaperBtn.id = "modeWallpaper";
+  modeWallpaperBtn.textContent = "Wallpaper";
+
+  modeEmbedBtn = document.createElement("button");
+  modeEmbedBtn.type = "button";
+  modeEmbedBtn.id = "modeEmbed";
+  modeEmbedBtn.textContent = "Embedded site";
+
+  modeToggle.append(modeWallpaperBtn, modeEmbedBtn);
+
+  const uploadLabel = document.createElement("label");
+  uploadLabel.className = "upload-label";
+  uploadLabel.htmlFor = "fileInput";
+  uploadLabel.textContent = "Upload images (JPEG, PNG, WebP)";
+
+  fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.id = "fileInput";
+  fileInput.accept = "image/jpeg,image/png,image/webp";
+  fileInput.multiple = true;
+  fileInput.hidden = true;
+
+  galleryMeta = document.createElement("p");
+  galleryMeta.id = "galleryMeta";
+  galleryMeta.className = "gallery-meta";
+  galleryMeta.textContent = "0 saved · random on each new tab";
+
+  gallery = document.createElement("div");
+  gallery.id = "gallery";
+
+  panel.append(hint, modeToggle, uploadLabel, fileInput, galleryMeta, gallery);
+  container.appendChild(panel);
 
   modeWallpaperBtn.addEventListener("click", () => {
     handleModeChange(DISPLAY_MODES.WALLPAPER);
@@ -232,6 +281,28 @@ function wireControls() {
     handleModeChange(DISPLAY_MODES.EMBED);
   });
 
+  fileInput.addEventListener("change", () => {
+    handleFilesSelected(fileInput.files);
+  });
+
+  getDisplayMode()
+    .then((mode) => {
+      applyMode(mode, 0);
+      return refreshGallery();
+    })
+    .then((items) => getDisplayMode().then((mode) => applyMode(mode, items.length)))
+    .catch(() => {});
+
+  return () => {
+    modeWallpaperBtn = null;
+    modeEmbedBtn = null;
+    fileInput = null;
+    gallery = null;
+    galleryMeta = null;
+  };
+}
+
+function wireShuffleButton() {
   shuffleBtn.addEventListener("click", () => {
     shuffleWallpaper().catch((error) => {
       setStatus(error.message || "Could not shuffle.", true);
@@ -239,14 +310,100 @@ function wireControls() {
   });
 }
 
+async function applyAppName() {
+  const appName = await getAppName();
+  document.title = appName;
+  appNameDisplay.textContent = appName;
+
+  if (chrome.action?.setTitle) {
+    chrome.action.setTitle({ title: appName });
+  }
+}
+
+function applyBrandingVisibility(enabled) {
+  greetingLayer.hidden = !enabled;
+}
+
+async function rotateGreeting() {
+  if (!(await getBrandingEnabled())) {
+    return;
+  }
+
+  const greetings = await getActiveGreetings();
+  const greeting = pickRandomGreeting(greetings, currentGreeting);
+  currentGreeting = greeting;
+  greetingMessage.textContent = greeting;
+}
+
+async function applyBranding() {
+  const enabled = await getBrandingEnabled();
+  applyBrandingVisibility(enabled);
+
+  if (!enabled) {
+    document.title = DEFAULT_APP_NAME;
+    currentGreeting = "";
+    greetingMessage.textContent = "";
+    return;
+  }
+
+  await applyAppName();
+  await rotateGreeting();
+}
+
 async function init() {
-  wireControls();
-  const items = await refreshGallery();
+  wireShuffleButton();
+
+  initNewtabSettings({
+    toggleButton: document.getElementById("controlsToggle"),
+    modal: document.getElementById("settingsModal"),
+    listView: document.getElementById("settingsListView"),
+    panelView: document.getElementById("settingsPanelView"),
+    listContainer: document.getElementById("settingsList"),
+    panelTitle: document.getElementById("settingsPanelTitle"),
+    panelContent: document.getElementById("settingsPanelContent"),
+    closeButton: document.getElementById("settingsCloseBtn"),
+    backdrop: document.getElementById("settingsBackdrop"),
+    sections: [
+      {
+        id: "branding",
+        label: "Branding",
+        description: "App name and greeting messages",
+        mount: (container) =>
+          mountBrandingPanel(container, {
+            setStatus,
+            onSaved: () => {
+              applyBranding().catch(() => {});
+            },
+          }),
+      },
+      {
+        id: "wallpapers",
+        label: "Wallpapers",
+        description: "Backgrounds and display mode",
+        mount: (container) => mountWallpaperPanel(container),
+      },
+    ],
+  });
+
+  await syncWallpaperOrderWithDatabase();
+  const items = await listWallpapersForGallery();
   const mode = await getDisplayMode();
   applyMode(mode, items.length);
+
+  const brandingEnabled = await getBrandingEnabled();
+  applyBrandingVisibility(brandingEnabled);
+  if (brandingEnabled) {
+    await applyAppName();
+  } else {
+    document.title = DEFAULT_APP_NAME;
+  }
+
   await loadRandomWallpaperIfNeeded(mode);
+  if (brandingEnabled && (mode !== DISPLAY_MODES.WALLPAPER || items.length === 0)) {
+    await rotateGreeting();
+  }
 }
 
 init().catch((error) => {
-  setStatus(error.message || "Failed to load wallpapers.", true);
+  setStatus(error.message || "Failed to load new tab.", true);
 });
