@@ -2,7 +2,7 @@ const STORAGE_KEY = "pointsConverterLastSet";
 
 const DEFAULTS = {
   miles: "10000",
-  programId: "ua",
+  programId: "b6",
 };
 
 export function getLastPointsSet() {

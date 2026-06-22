@@ -1,7 +1,7 @@
 import {
   estimateUsd,
   POINTS_PROGRAMS,
-  VALUATIONS_LAST_UPDATED,
+  VALUATIONS_SOURCE,
 } from "./lib/pointsValuations.js";
 import {
   getLastPointsSet,
@@ -9,7 +9,7 @@ import {
 } from "./lib/pointsConverterSettings.js";
 
 const SAVE_DEBOUNCE_MS = 300;
-const DEFAULT_PROGRAM_ID = "ua";
+const DEFAULT_PROGRAM_ID = "b6";
 
 function formatUsd(value) {
   return new Intl.NumberFormat(undefined, {
@@ -44,7 +44,7 @@ export function mountPointsConverterTool(container) {
   const desc = document.createElement("p");
   desc.className = "tool-form-desc";
   desc.textContent =
-    "Estimate flight miles in rough USD using bundled planning benchmarks.";
+    "Estimate Capital One travel partner miles in rough USD using bundled planning benchmarks.";
 
   const milesLabel = document.createElement("label");
   milesLabel.className = "tool-label";
@@ -86,9 +86,13 @@ export function mountPointsConverterTool(container) {
   const rateLine = document.createElement("p");
   rateLine.className = "currency-rate-date";
 
+  const regionsLine = document.createElement("p");
+  regionsLine.className = "points-converter-regions";
+
   resultWrap.appendChild(resultLabel);
   resultWrap.appendChild(resultOutput);
   resultWrap.appendChild(rateLine);
+  resultWrap.appendChild(regionsLine);
 
   const disclaimer = document.createElement("p");
   disclaimer.className = "points-converter-note";
@@ -163,7 +167,8 @@ export function mountPointsConverterTool(container) {
     try {
       const result = estimateUsd(milesValue, programSelect.value);
       resultOutput.textContent = formatUsd(result.usd);
-      rateLine.textContent = `Estimate @ ${formatCpp(result.centsPerMile)}¢ per mile · Updated ${VALUATIONS_LAST_UPDATED}`;
+      rateLine.textContent = `Estimate @ ${formatCpp(result.centsPerMile)}¢ per mile · ${VALUATIONS_SOURCE}`;
+      regionsLine.textContent = `Regions: ${result.regions}`;
       resultWrap.hidden = false;
       schedulePersistSettings();
     } catch (err) {

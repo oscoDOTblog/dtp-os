@@ -817,3 +817,10 @@ body {
   line-height: 1.45;
   color: rgba(245, 245, 245, 0.5);
 }
+
+.points-converter-regions {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: rgba(245, 245, 245, 0.55);
+}
