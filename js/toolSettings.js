@@ -4,5 +4,7 @@ export const TOOLS = {
   YOUTUBE_PLAYLIST: "youtube-playlist",
   VIDEO_DOWNLOADER: "video-downloader",
   CLOUDFLARE_DOCKER: "cloudflare-docker",
+  CURRENCY_CONVERTER: "currency-converter",
+  POINTS_CONVERTER: "points-converter",
   COLORS: "colors",
 };

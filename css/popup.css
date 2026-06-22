@@ -739,3 +739,81 @@ body {
   background: rgba(255, 105, 180, 0.28);
   outline: none;
 }
+
+/* Currency converter */
+.currency-converter-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.currency-converter-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.currency-select {
+  width: 100%;
+  cursor: pointer;
+}
+
+.currency-swap-btn {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: 0.125rem;
+  padding: 0;
+  border: 1px solid rgba(255, 105, 180, 0.5);
+  border-radius: 0.375rem;
+  background: rgba(255, 105, 180, 0.15);
+  color: #ff69b4;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.currency-swap-btn:hover:not(:disabled),
+.currency-swap-btn:focus-visible:not(:disabled) {
+  background: rgba(255, 105, 180, 0.28);
+  outline: none;
+}
+
+.currency-swap-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.currency-result {
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.currency-rate-date {
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(245, 245, 245, 0.55);
+}
+
+.currency-loading {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(245, 245, 245, 0.6);
+}
+
+.currency-loading[hidden] {
+  display: none;
+}
+
+/* Points converter */
+.points-converter-note {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: rgba(245, 245, 245, 0.5);
+}

@@ -3,7 +3,7 @@
 * [ ] settings
     * [x] set customizable app name (instead of dtp-os) 
     * [x] set customizable messages for new tab greetings, inspirational quotes
-        * have the user input a JSON array, else have like 25 rotating generic greeting messages that are high evergy and inviting
+        * [x] have the user input a JSON array, else have like 25 rotating generic greeting messages that are high evergy and inviting
     * [ ] set customizable new tab messages v2
         * [ ] possible hook up an API to auto generate these
     * [ ] set customizable new tab messages v3

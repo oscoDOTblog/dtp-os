@@ -10,7 +10,8 @@
   "permissions": ["tabs", "storage"],
   "host_permissions": [
     "https://xvbc38vi4h.execute-api.us-east-2.amazonaws.com/*",
-    "https://*.amazonaws.com/*"
+    "https://*.amazonaws.com/*",
+    "https://api.frankfurter.app/*"
   ],
   "background": {
     "service_worker": "background.js"
