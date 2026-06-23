@@ -6,6 +6,7 @@ import {
   setBrandingEnabled,
   setCustomGreetingsJson,
 } from "./appSettings.js";
+import { createFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
 
 const GREETINGS_HELP_ID = "custom-greetings-help";
 
@@ -244,7 +245,10 @@ function createBrandingForm({ setStatus, onSaved, ids }) {
 }
 
 export function mountSettingsTool(container, { showToast }) {
-  const panel = createBrandingForm({
+  const stack = document.createElement("div");
+  stack.className = "settings-tool-stack";
+
+  const brandingPanel = createBrandingForm({
     ids: {
       brandingEnabled: "settingsBrandingEnabled",
       appName: "settingsAppName",
@@ -255,9 +259,23 @@ export function mountSettingsTool(container, { showToast }) {
       showToast(message, isError);
     },
   });
-  container.appendChild(panel);
+
+  const formInjectPanel = createFormInjectSettingsPanel({
+    ids: {
+      defaults: "settingsFormInjectDefaults",
+      defaultsHelp: "settingsFormInjectDefaultsHelp",
+    },
+    setStatus: (message, isError = false) => {
+      showToast(message, isError);
+    },
+  });
+
+  stack.append(brandingPanel, formInjectPanel);
+  container.appendChild(stack);
+
   return () => {
-    panel.cleanup?.();
+    brandingPanel.cleanup?.();
+    formInjectPanel.cleanup?.();
   };
 }
 

@@ -62,7 +62,14 @@ dtp-os/
 │   ├── lib/
 │   │   ├── config.js                 # VIDEO_DL_API_URL (sway-sls Lambda)
 │   │   ├── videodlClient.js          # Async video download API client
-│   │   └── youtubeChannelPlaylist.js # UC → UU playlist URL logic
+│   │   ├── youtubeChannelPlaylist.js # UC → UU playlist URL logic
+│   │   ├── formInjectDefaults.js     # Built-in mock values for common form fields
+│   │   ├── formInjectSettings.js     # Custom defaults persistence (chrome.storage.local)
+│   │   ├── formInjectPresets.js      # Site-specific presets (e.g. Wendy intake)
+│   │   └── formInjectClient.js       # activeTab + scripting bridge for Form Inject
+│   ├── inject/
+│   │   └── formInjectEngine.global.js # In-page scan/fill engine (injected via scripting)
+│   ├── formInject.js        # Form Inject popup tool
 │   ├── storage.js           # IndexedDB wallpaper blobs
 │   ├── wallpapers.js        # CRUD, validation, mode + order in chrome.storage
 │   ├── appSettings.js       # App name + custom greetings in chrome.storage
@@ -88,7 +95,7 @@ There is no build step, bundler, or package manager. The extension is loaded **a
 ### `manifest.json`
 
 - **Manifest version**: 3 (service worker background, no persistent background page).
-- **Permissions**: `tabs` (service worker tab redirect) and `storage` (display mode and wallpaper index).
+- **Permissions**: `tabs`, `storage`, `scripting`, and `activeTab` (Form Inject on user gesture).
 - **Host permissions**: sway-sls video-download API Gateway and `*.amazonaws.com` for signed S3 download URLs (video downloader tool only).
 - **New tab override**: `chrome_url_overrides.newtab` points at `tab_override.html`, which is the primary mechanism for replacing the new tab page.
 - **Toolbar action**: `action.default_popup` points at `popup.html` for the browser-tools launcher.
@@ -112,11 +119,12 @@ To point the embed at a different home, change the iframe `src` in `tab_override
 
 Clicking the toolbar icon opens a compact popup separate from the new tab page.
 
-1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, and Cloudflare Docker (implemented); Colors (stub marked “Soon”).
+1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject (implemented); Colors (stub marked “Soon”).
 2. **Emojis picker** — Search bar and scrollable emoji grid with client-side filter. Clicking an emoji copies it to the clipboard, shows a brief toast, then closes the popup.
 3. **YouTube Playlist** — Paste channel page source, URL, or `UC...` ID; live-builds uploads playlist URL (`UC` → `UU`); copy and open in YouTube. Client-only (`js/lib/youtubeChannelPlaylist.js`).
 4. **Video Downloader** — Paste a social URL; polls sway-sls Lambda (`js/lib/videodlClient.js`), then fetches the signed file and triggers a browser download.
 5. **Cloudflare Docker** — Paste `docker run ...`; inserts `-d --restart unless-stopped` after `docker run`; copy converted command.
+6. **Form Inject** — Scan or fill form fields on the active tab. Mock defaults and fill mode are configured under **Settings** (popup or new tab gear → Form Inject).
 
 Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; `js/popup.js` routes by tool id and runs cleanup when navigating back.
 
@@ -148,10 +156,12 @@ This logic was added to support **Opera and other Chromium browsers** (see commi
 | Permission | Why |
 |------------|-----|
 | `tabs` | Read tab URL on create/update; redirect shared start page tabs to `tab_override.html` |
-| `storage` | Persist `displayMode` and `wallpaperOrder` (image bytes live in IndexedDB, not storage quota) |
+| `storage` | Persist `displayMode`, `wallpaperOrder`, and tool settings (e.g. Form Inject custom defaults) |
+| `scripting` | Inject Form Inject engine into the active tab when the user clicks Scan or Fill |
+| `activeTab` | Temporary access to the active tab for Form Inject (no broad host permissions) |
 | `host_permissions` (API Gateway + `*.amazonaws.com`) | Video Downloader: start/poll Lambda jobs and fetch signed S3 download URLs |
 
-The extension does **not** request `scripting` or broad `<all_urls>` access. It does not inject content scripts into arbitrary pages. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), and outbound `fetch` to the video-download API when the user starts a download.
+Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts or request `<all_urls>`. Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, and DOM writes to form fields on the active tab when Form Inject is used.
 
 Users must **keep** the extension’s new-tab override when prompted (“page was changed by … extension”); declining disables the override.
 

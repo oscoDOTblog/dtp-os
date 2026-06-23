@@ -7,4 +7,5 @@ export const TOOLS = {
   CURRENCY_CONVERTER: "currency-converter",
   POINTS_CONVERTER: "points-converter",
   COLORS: "colors",
+  FORM_INJECT: "form-inject",
 };

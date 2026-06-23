@@ -1,14 +1,21 @@
 {
   "name": "dtp-os",
-  "description": "dtp-os — new tab home and browser tools",
+  "description": "dtp-os \u2014 new tab home and browser tools",
   "version": "1.0.0",
   "manifest_version": 3,
   "icons": {
     "48": "assets/48.png",
     "128": "assets/128.png"
   },
-  "permissions": ["tabs", "storage"],
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
   "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
     "https://xvbc38vi4h.execute-api.us-east-2.amazonaws.com/*",
     "https://*.amazonaws.com/*",
     "https://api.frankfurter.app/*"

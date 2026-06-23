@@ -6,6 +6,7 @@ import { mountCloudflareDockerTool } from "./cloudflareDocker.js";
 import { mountCurrencyConverterTool } from "./currencyConverter.js";
 import { mountPointsConverterTool } from "./pointsConverter.js";
 import { mountSettingsTool } from "./settingsTool.js";
+import { mountFormInjectTool } from "./formInject.js";
 import { TOOLS } from "./toolSettings.js";
 
 const TOOL_DEFINITIONS = [
@@ -16,6 +17,7 @@ const TOOL_DEFINITIONS = [
   { id: TOOLS.CLOUDFLARE_DOCKER, label: "Cloudflare Docker", implemented: true },
   { id: TOOLS.CURRENCY_CONVERTER, label: "Currency Converter", implemented: true },
   { id: TOOLS.POINTS_CONVERTER, label: "Points Conversion", implemented: true },
+  { id: TOOLS.FORM_INJECT, label: "Form Inject", implemented: true },
   { id: TOOLS.COLORS, label: "Colors", implemented: false },
 ];
 
@@ -39,6 +41,7 @@ const TOOL_MOUNTERS = {
   [TOOLS.CLOUDFLARE_DOCKER]: mountCloudflareDockerTool,
   [TOOLS.CURRENCY_CONVERTER]: mountCurrencyConverterTool,
   [TOOLS.POINTS_CONVERTER]: mountPointsConverterTool,
+  [TOOLS.FORM_INJECT]: mountFormInjectTool,
 };
 
 function showToast(message, isError = false) {

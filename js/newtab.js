@@ -11,6 +11,7 @@ import {
 } from "./wallpapers.js";
 import { getAppName, getActiveGreetings, getBrandingEnabled, pickRandomGreeting, DEFAULT_APP_NAME } from "./appSettings.js";
 import { mountBrandingPanel } from "./settingsTool.js";
+import { mountFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
 import { initNewtabSettings } from "./newtabSettings.js";
 
 const backgroundLayer = document.getElementById("backgroundLayer");
@@ -374,6 +375,15 @@ async function init() {
             onSaved: () => {
               applyBranding().catch(() => {});
             },
+          }),
+      },
+      {
+        id: "form-inject",
+        label: "Form Inject",
+        description: "Mock data for form filling",
+        mount: (container) =>
+          mountFormInjectSettingsPanel(container, {
+            setStatus,
           }),
       },
       {
