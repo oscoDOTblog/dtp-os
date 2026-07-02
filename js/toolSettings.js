@@ -8,4 +8,5 @@ export const TOOLS = {
   POINTS_CONVERTER: "points-converter",
   COLORS: "colors",
   FORM_INJECT: "form-inject",
+  TWITCH_AD_BLOCK: "twitch-ad-block",
 };

@@ -66,10 +66,16 @@ dtp-os/
 │   │   ├── formInjectDefaults.js     # Built-in mock values for common form fields
 │   │   ├── formInjectSettings.js     # Custom defaults persistence (chrome.storage.local)
 │   │   ├── formInjectPresets.js      # Site-specific presets (e.g. Wendy intake)
-│   │   └── formInjectClient.js       # activeTab + scripting bridge for Form Inject
+│   │   ├── formInjectClient.js       # activeTab + scripting bridge for Form Inject
+│   │   ├── twitchAdBlockSettings.js  # Twitch Ad Block enable flag (chrome.storage.local)
+│   │   ├── twitchAdBlockMeta.js      # Vendored vaft version + last-updated date
+│   │   ├── twitchAdBlockRegistration.js # Dynamic MAIN-world content script registration
+│   │   └── twitchAdBlockUpdateClient.js # On-demand GitHub release check
 │   ├── inject/
-│   │   └── formInjectEngine.global.js # In-page scan/fill engine (injected via scripting)
+│   │   ├── formInjectEngine.global.js # In-page scan/fill engine (injected via scripting)
+│   │   └── twitchAdBlockEngine.global.js # Vendored vaft engine (Twitch ad blocking)
 │   ├── formInject.js        # Form Inject popup tool
+│   ├── twitchAdBlock.js     # Twitch Ad Block popup tool
 │   ├── storage.js           # IndexedDB wallpaper blobs
 │   ├── wallpapers.js        # CRUD, validation, mode + order in chrome.storage
 │   ├── appSettings.js       # App name + custom greetings in chrome.storage
@@ -119,12 +125,13 @@ To point the embed at a different home, change the iframe `src` in `tab_override
 
 Clicking the toolbar icon opens a compact popup separate from the new tab page.
 
-1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject (implemented); Colors (stub marked “Soon”).
+1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject, Twitch Ad Block (implemented); Colors (stub marked “Soon”).
 2. **Emojis picker** — Search bar and scrollable emoji grid with client-side filter. Clicking an emoji copies it to the clipboard, shows a brief toast, then closes the popup.
 3. **YouTube Playlist** — Paste channel page source, URL, or `UC...` ID; live-builds uploads playlist URL (`UC` → `UU`); copy and open in YouTube. Client-only (`js/lib/youtubeChannelPlaylist.js`).
 4. **Video Downloader** — Paste a social URL; polls sway-sls Lambda (`js/lib/videodlClient.js`), then fetches the signed file and triggers a browser download.
 5. **Cloudflare Docker** — Paste `docker run ...`; inserts `-d --restart unless-stopped` after `docker run`; copy converted command.
 6. **Form Inject** — Scan or fill form fields on the active tab. Mock defaults and fill mode are configured under **Settings** (popup or new tab gear → Form Inject).
+7. **Twitch Ad Block** — Toggle in-stream and overlay ad blocking on `*.twitch.tv`. When enabled, registers a MAIN-world `document_start` content script with the vendored **vaft** engine from [ryanbr/TwitchAdSolutions](https://github.com/ryanbr/TwitchAdSolutions). Shows vendored version, last-updated date, and an on-demand “Check for updates” button against the GitHub releases API. Users must refresh open Twitch tabs after toggling.
 
 Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; `js/popup.js` routes by tool id and runs cleanup when navigating back.
 
@@ -142,7 +149,13 @@ Upload rules: JPEG/PNG/WebP, max 5 MB per file, max 50 images. `syncWallpaperOrd
 
 ### `background.js` (service worker)
 
-Handles Chromium variants that initially open `chrome://startpageshared/` instead of going straight to the overridden new tab document.
+ES module (`"type": "module"` in `manifest.json`). Responsibilities:
+
+1. **Shared start page redirect** — Handles Chromium variants that initially open `chrome://startpageshared/` instead of going straight to the overridden new tab document.
+2. **Twitch Ad Block sync** — On install, startup, `chrome.storage.onChanged`, and popup message `dtp-twitch-adblock-sync`, calls `syncTwitchAdBlockRegistration()` to register or unregister the vaft content script on `*.twitch.tv`.
+3. **Form Inject relay** — Handles `dtp-form-inject` messages for tab script injection.
+
+Shared start page flow:
 
 1. On `chrome.tabs.onCreated`, if the new tab has **no URL yet** (`!tab.url`), register a one-shot-style handler on `chrome.tabs.onUpdated`.
 2. When that tab’s URL updates, if it starts with `chrome://startpageshared/`, call `chrome.tabs.update(tab.id, { url: "tab_override.html" })`.
@@ -160,8 +173,14 @@ This logic was added to support **Opera and other Chromium browsers** (see commi
 | `scripting` | Inject Form Inject engine into the active tab when the user clicks Scan or Fill |
 | `activeTab` | Temporary access to the active tab for Form Inject (no broad host permissions) |
 | `host_permissions` (API Gateway + `*.amazonaws.com`) | Video Downloader: start/poll Lambda jobs and fetch signed S3 download URLs |
+| `host_permissions` (`*://*.twitch.tv/*`) | Twitch Ad Block: register MAIN-world content script when enabled |
+| `host_permissions` (`https://api.github.com/*`) | Twitch Ad Block: on-demand check for newer vaft releases |
 
-Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts or request `<all_urls>`. Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, and DOM writes to form fields on the active tab when Form Inject is used.
+Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts or request `<all_urls>`.
+
+**Twitch Ad Block** uses `chrome.scripting.registerContentScripts` (not static manifest `content_scripts`) so the vaft engine is injected only when `twitchAdBlockEnabled` is true. The script runs in the page **MAIN** world at `document_start` to hook Twitch Web Workers before the player initializes. Vendored from `ryanbr/TwitchAdSolutions` tag `v68.4.0`; bump `VENDORED_VERSION` and `VENDORED_DATE` in `js/lib/twitchAdBlockMeta.js` when re-vendoring `js/inject/twitchAdBlockEngine.global.js`.
+
+Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, DOM writes to form fields on the active tab when Form Inject is used, and page-context script injection on Twitch when Twitch Ad Block is enabled.
 
 Users must **keep** the extension’s new-tab override when prompted (“page was changed by … extension”); declining disables the override.
 

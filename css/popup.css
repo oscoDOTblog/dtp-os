@@ -930,3 +930,47 @@ body {
   line-height: 1.45;
   color: rgba(245, 245, 245, 0.55);
 }
+
+/* Twitch Ad Block */
+.twitch-ad-block-status {
+  margin-top: 0.35rem;
+}
+
+.twitch-ad-block-update-status {
+  margin-top: 0.25rem;
+  color: #ff69b4;
+}
+
+.twitch-ad-block-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.twitch-ad-block-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(245, 245, 245, 0.6);
+}
+
+.twitch-ad-block-link {
+  font-size: 0.72rem;
+  color: #ff69b4;
+  text-decoration: none;
+}
+
+.twitch-ad-block-link:hover,
+.twitch-ad-block-link:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.twitch-ad-block-note {
+  margin-top: 0.5rem;
+  font-size: 0.68rem;
+  color: rgba(245, 245, 245, 0.45);
+}

@@ -9,6 +9,7 @@ export const TOOL_ICONS = {
   [TOOLS.CURRENCY_CONVERTER]: "assets/tools/currency-converter.svg",
   [TOOLS.POINTS_CONVERTER]: "assets/tools/points-converter.svg",
   [TOOLS.FORM_INJECT]: "assets/tools/form-inject.svg",
+  [TOOLS.TWITCH_AD_BLOCK]: "assets/tools/twitch-ad-block.svg",
   [TOOLS.COLORS]: "assets/tools/colors.svg",
 };
 

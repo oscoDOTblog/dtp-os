@@ -18,10 +18,13 @@
     "http://localhost/*",
     "https://xvbc38vi4h.execute-api.us-east-2.amazonaws.com/*",
     "https://*.amazonaws.com/*",
-    "https://api.frankfurter.app/*"
+    "https://api.frankfurter.app/*",
+    "*://*.twitch.tv/*",
+    "https://api.github.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup.html",

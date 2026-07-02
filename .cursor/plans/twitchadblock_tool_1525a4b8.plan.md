@@ -4,16 +4,16 @@ overview: Add a TwitchAdBlock tool to dtp-os that toggles on/off from the popup 
 todos:
   - id: vendor-vaft
     content: Vendor vaft/vaft.user.js from ryanbr/TwitchAdSolutions@v68.4.0 into js/inject/twitchAdBlockEngine.global.js with MIT attribution and pinned version comment
-    status: pending
+    status: completed
   - id: settings-lib
     content: Create js/lib/twitchAdBlockSettings.js (getEnabled/setEnabled, default false)
-    status: pending
+    status: completed
   - id: registration-lib
     content: Create js/lib/twitchAdBlockRegistration.js with dynamic registerContentScripts/unregister
-    status: pending
+    status: completed
   - id: background-sync
     content: "Extend background.js: onStartup, onInstalled, storage.onChanged, message handler"
-    status: pending
+    status: completed
   - id: meta-lib
     content: Create js/lib/twitchAdBlockMeta.js with VENDORED_VERSION, VENDORED_DATE constants (update when re-vendoring)
     status: pending
@@ -22,16 +22,16 @@ todos:
     status: pending
   - id: popup-tool
     content: Create js/twitchAdBlock.js with enable toggle, version footer (Last updated), and Check for updates button
-    status: pending
+    status: completed
   - id: register-tool
     content: Register tool in toolSettings.js, toolIcons.js, popup.js; add SVG icon
-    status: pending
+    status: completed
   - id: manifest-perms
     content: Add host_permissions for *://*.twitch.tv/* and https://api.github.com/* to manifest.json
-    status: pending
+    status: completed
   - id: docs
     content: Update docs/architecture.md with TwitchAdBlock tool, flow, and maintenance notes
-    status: pending
+    status: completed
 isProject: false
 ---
 

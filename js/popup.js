@@ -6,6 +6,7 @@ import { mountCloudflareDockerTool } from "./cloudflareDocker.js";
 import { mountCurrencyConverterTool } from "./currencyConverter.js";
 import { mountPointsConverterTool } from "./pointsConverter.js";
 import { mountFormInjectTool } from "./formInject.js";
+import { mountTwitchAdBlockTool } from "./twitchAdBlock.js";
 import { TOOLS } from "./toolSettings.js";
 import { getToolIconPath } from "./toolIcons.js";
 import {
@@ -22,6 +23,7 @@ const TOOL_DEFINITIONS = [
   { id: TOOLS.EMOJIS, label: "Emojis", implemented: true },
   { id: TOOLS.FORM_INJECT, label: "Form Inject", implemented: true },
   { id: TOOLS.POINTS_CONVERTER, label: "Points Conversion", implemented: true },
+  { id: TOOLS.TWITCH_AD_BLOCK, label: "Twitch Ad Block", implemented: true },
   { id: TOOLS.VIDEO_DOWNLOADER, label: "Video Downloader", implemented: true },
   { id: TOOLS.YOUTUBE_PLAYLIST, label: "YouTube Playlist", implemented: true },
 ];
@@ -47,6 +49,7 @@ const TOOL_MOUNTERS = {
   [TOOLS.CURRENCY_CONVERTER]: mountCurrencyConverterTool,
   [TOOLS.POINTS_CONVERTER]: mountPointsConverterTool,
   [TOOLS.FORM_INJECT]: mountFormInjectTool,
+  [TOOLS.TWITCH_AD_BLOCK]: mountTwitchAdBlockTool,
 };
 
 function showToast(message, isError = false) {
