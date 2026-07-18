@@ -1,33 +1,70 @@
-# buildspace os
+# dtp-os
 
-## setup
-### you don't need to write any code or know how to code to set this up. It will take 2 mins max — promise
+Manifest V3 Chromium extension: custom new-tab home plus a toolbar popup of browser tools. Forked from [buildspace-os](https://github.com/buildspace/buildspace-os), with Opera/shared-start-page fixes and a growing tool set.
 
-**we even made a 2 min vid for you**
+No build step — load the folder unpacked.
 
-[installing buildspcae os](https://github.com/buildspace/buildspace-os/assets/13204620/c19da4b4-1266-4772-ba4e-0fdd795df9f4)
+## Features
 
-### 1. download
-click the green "Code" button and select "Download ZIP". make sure to extract the download in a safe spot!<br>
-![](https://i.imgur.com/TlzzORw.png)
+### New tab
 
-### 2. turn on Developer mode
-in your browser head to the "Extensions" section. this can be found in the settings portion of your browser! checkout the screenshot below:<br>
-![](https://i.imgur.com/igEIfnt.png)
+- **Embedded site** — Full-viewport iframe home (default: buildspace.so/home)
+- **Wallpaper mode** — Local JPEG/PNG/WebP backgrounds (IndexedDB, max 50 × 5 MB)
+- **Shuffle** — Random wallpaper per new tab; shuffle button re-rolls on the current tab
+- **Branding** — Custom app name and rotating greetings (JSON array, or 105 built-ins)
+- **Settings modal** — Gear panel for display mode, wallpapers, branding, and Form Inject defaults
 
-once you get there you'll see "Developer mode" in the top right. make sure to toggle that **on** and then you'll see new options (we're gonna be using "Load unpacked")<br>
-![](https://i.imgur.com/l8GLD4b.png)
+### Toolbar tools
 
-### 3. add the app to your browser
-you're at the home stretch! press the "Load unpacked" option and then go to the folder where you saved buildspace os. it should look something like this:<br>
-![](https://i.imgur.com/ztCAc8i.png)
+Click the extension icon for the tool launcher (favorites pin tools to the top):
 
-once you select it you should see this (nice you did it!)<br>
-![](https://i.imgur.com/VmpDMFq.png)
+| Tool | What it does |
+|------|----------------|
+| **Emojis** | Searchable emoji grid; click to copy |
+| **YouTube Playlist** | Channel URL/`UC…` ID → uploads playlist (`UU…`); copy or open |
+| **Video Downloader** | Paste a social URL; download via sway-sls Lambda + signed S3 |
+| **Cloudflare Docker** | `docker run …` → insert `-d --restart unless-stopped` |
+| **Currency Converter** | Live ECB rates via Frankfurter |
+| **Points Conversion** | Loyalty points → USD estimate (cents-per-mile valuations) |
+| **Form Inject** | Scan/fill form fields on the active tab with mock defaults & presets |
+| **Twitch Ad Block** | Optional in-stream/overlay blocking on `*.twitch.tv` (vendored [vaft](https://github.com/ryanbr/TwitchAdSolutions)); check for updates |
 
-### 4. open a new tab
-now you can see this thing in action! Open a new tab and you'll notice that there is a prompt saying that the page was changed by the buildspace os extension. **Make sure to select keep it or it will not work.**<br>
-![](https://i.imgur.com/UtvBBmW.png)
+**Colors** is listed as coming soon.
 
-## got questions?
-for any questions please send an email to support@buildspace.so
+### Other
+
+- Opera / Chromium shared start page (`chrome://startpageshared/…`) redirected to the new-tab page
+- Settings also available from the popup
+- Wallpapers and settings stay on-device (`IndexedDB` / `chrome.storage.local`)
+
+## Setup
+
+Takes about two minutes. No coding required.
+
+### 1. Download
+
+Clone or download this repo and unzip if needed. The folder must contain `manifest.json`.
+
+### 2. Turn on Developer mode
+
+In your browser, open **Extensions** (e.g. `chrome://extensions`), then enable **Developer mode**.
+
+### 3. Load the extension
+
+Choose **Load unpacked** and select the `dtp-os` folder.
+
+### 4. Open a new tab
+
+When Chrome warns that the page was changed by the extension, **keep** the change or the new-tab override will not apply.
+
+Click the toolbar icon to open the tool list.
+
+## Docs
+
+- [Architecture](docs/architecture.md) — internals, permissions, layout
+- [Wallpapers](docs/wallpapers.md) — upload, shuffle, limits
+- [Wishlist](docs/wishlist.md) — planned work
+
+## Browser support
+
+Works on Chrome, Edge, and other Chromium browsers (including Opera via the shared-start redirect). Not validated for Firefox.
