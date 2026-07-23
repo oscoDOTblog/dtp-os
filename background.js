@@ -1,5 +1,7 @@
 import { syncTwitchAdBlockRegistration } from "./js/lib/twitchAdBlockRegistration.js";
 import { getTwitchAdBlockEnabled } from "./js/lib/twitchAdBlockSettings.js";
+import { syncEmojiAutocompleteRegistration } from "./js/lib/emojiAutocompleteRegistration.js";
+import { getEmojiAutocompleteEnabled } from "./js/lib/emojiAutocompleteSettings.js";
 
 const FORM_INJECT_ENGINE_FILE = "js/inject/formInjectEngine.global.js";
 
@@ -8,27 +10,48 @@ async function syncTwitchAdBlockFromStorage() {
   await syncTwitchAdBlockRegistration(enabled);
 }
 
+async function syncEmojiAutocompleteFromStorage() {
+  const enabled = await getEmojiAutocompleteEnabled();
+  await syncEmojiAutocompleteRegistration(enabled);
+}
+
+async function syncAllContentScriptsFromStorage() {
+  await Promise.all([
+    syncTwitchAdBlockFromStorage(),
+    syncEmojiAutocompleteFromStorage(),
+  ]);
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-  syncTwitchAdBlockFromStorage().catch((err) => {
-    console.error("Twitch Ad Block install sync failed:", err);
+  syncAllContentScriptsFromStorage().catch((err) => {
+    console.error("Content script install sync failed:", err);
   });
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  syncTwitchAdBlockFromStorage().catch((err) => {
-    console.error("Twitch Ad Block startup sync failed:", err);
+  syncAllContentScriptsFromStorage().catch((err) => {
+    console.error("Content script startup sync failed:", err);
   });
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes.twitchAdBlockEnabled) {
+  if (areaName !== "local") {
     return;
   }
 
-  const enabled = changes.twitchAdBlockEnabled.newValue === true;
-  syncTwitchAdBlockRegistration(enabled).catch((err) => {
-    console.error("Twitch Ad Block storage sync failed:", err);
-  });
+  if (changes.twitchAdBlockEnabled) {
+    const enabled = changes.twitchAdBlockEnabled.newValue === true;
+    syncTwitchAdBlockRegistration(enabled).catch((err) => {
+      console.error("Twitch Ad Block storage sync failed:", err);
+    });
+  }
+
+  if (changes.emojiAutocompleteEnabled) {
+    const enabled = changes.emojiAutocompleteEnabled.newValue !== false;
+    syncEmojiAutocompleteRegistration(enabled).catch((err) => {
+      console.error("Emoji autocomplete storage sync failed:", err);
+    });
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -45,6 +68,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ? message.enabled
             : await getTwitchAdBlockEnabled();
         await syncTwitchAdBlockRegistration(enabled);
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err?.message || String(err),
+        });
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === "dtp-emoji-autocomplete-sync") {
+    (async () => {
+      try {
+        const enabled =
+          typeof message.enabled === "boolean"
+            ? message.enabled
+            : await getEmojiAutocompleteEnabled();
+        await syncEmojiAutocompleteRegistration(enabled);
         sendResponse({ ok: true });
       } catch (err) {
         sendResponse({

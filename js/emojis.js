@@ -1,20 +1,7 @@
 import { EMOJI_LIST } from "./emoji-data.js";
+import { filterEmojis } from "./lib/emojiSearch.js";
 
 const TOAST_MS = 400;
-
-function normalizeQuery(query) {
-  return query.trim().toLowerCase();
-}
-
-function matchesEmoji(entry, query) {
-  if (!query) {
-    return true;
-  }
-  if (entry.emoji.includes(query)) {
-    return true;
-  }
-  return entry.keywords.some((keyword) => keyword.includes(query));
-}
 
 function createEmojiButton(emoji, onSelect) {
   const button = document.createElement("button");
@@ -59,8 +46,7 @@ export function mountEmojisTool(container, { showToast }) {
   }
 
   function renderGrid(query) {
-    const normalized = normalizeQuery(query);
-    const results = EMOJI_LIST.filter((entry) => matchesEmoji(entry, normalized));
+    const results = filterEmojis(EMOJI_LIST, query);
 
     grid.replaceChildren();
 

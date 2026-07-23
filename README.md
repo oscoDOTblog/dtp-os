@@ -12,7 +12,8 @@ No build step — load the folder unpacked.
 - **Wallpaper mode** — Local JPEG/PNG/WebP backgrounds (IndexedDB, max 50 × 5 MB)
 - **Shuffle** — Random wallpaper per new tab; shuffle button re-rolls on the current tab
 - **Branding** — Custom app name and rotating greetings (JSON array, or 105 built-ins)
-- **Settings modal** — Gear panel for display mode, wallpapers, branding, and Form Inject defaults
+- **Settings modal** — Gear panel for display mode, wallpapers, branding, Form Inject defaults, and emoji autocomplete
+- **Emoji Autocomplete** — On by default: type `:smile` in page `input`/`textarea` fields for emoji suggestions (toggle in Settings)
 
 ### Toolbar tools
 

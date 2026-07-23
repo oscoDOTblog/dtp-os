@@ -7,6 +7,7 @@ import {
   setCustomGreetingsJson,
 } from "./appSettings.js";
 import { createFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
+import { createEmojiAutocompleteSettingsPanel } from "./emojiAutocompleteSettingsPanel.js";
 
 const GREETINGS_HELP_ID = "custom-greetings-help";
 
@@ -270,12 +271,22 @@ export function mountSettingsTool(container, { showToast }) {
     },
   });
 
-  stack.append(brandingPanel, formInjectPanel);
+  const emojiAutocompletePanel = createEmojiAutocompleteSettingsPanel({
+    ids: {
+      enabled: "settingsEmojiAutocompleteEnabled",
+    },
+    setStatus: (message, isError = false) => {
+      showToast(message, isError);
+    },
+  });
+
+  stack.append(brandingPanel, formInjectPanel, emojiAutocompletePanel);
   container.appendChild(stack);
 
   return () => {
     brandingPanel.cleanup?.();
     formInjectPanel.cleanup?.();
+    emojiAutocompletePanel.cleanup?.();
   };
 }
 

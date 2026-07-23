@@ -57,7 +57,8 @@ dtp-os/
 ├── tab_override.html   # New tab shell (layers + controls)
 ├── css/
 │   ├── newtab.css      # New tab layout and settings panel
-│   └── popup.css       # Toolbar popup layout and tools
+│   ├── popup.css       # Toolbar popup layout and tools
+│   └── emojiAutocomplete.css # In-page :query emoji picker overlay
 ├── js/
 │   ├── lib/
 │   │   ├── config.js                 # VIDEO_DL_API_URL (sway-sls Lambda)
@@ -70,12 +71,17 @@ dtp-os/
 │   │   ├── twitchAdBlockSettings.js  # Twitch Ad Block enable flag (chrome.storage.local)
 │   │   ├── twitchAdBlockMeta.js      # Vendored vaft version + last-updated date
 │   │   ├── twitchAdBlockRegistration.js # Dynamic MAIN-world content script registration
-│   │   └── twitchAdBlockUpdateClient.js # On-demand GitHub release check
+│   │   ├── twitchAdBlockUpdateClient.js # On-demand GitHub release check
+│   │   ├── emojiSearch.js            # Shared emoji query normalize/filter helpers
+│   │   ├── emojiAutocompleteSettings.js # Emoji autocomplete enable flag (default on)
+│   │   └── emojiAutocompleteRegistration.js # Dynamic ISOLATED-world content script registration
 │   ├── inject/
 │   │   ├── formInjectEngine.global.js # In-page scan/fill engine (injected via scripting)
-│   │   └── twitchAdBlockEngine.global.js # Vendored vaft engine (Twitch ad blocking)
+│   │   ├── twitchAdBlockEngine.global.js # Vendored vaft engine (Twitch ad blocking)
+│   │   └── emojiAutocompleteEngine.global.js # In-page :query emoji autocomplete
 │   ├── formInject.js        # Form Inject popup tool
 │   ├── twitchAdBlock.js     # Twitch Ad Block popup tool
+│   ├── emojiAutocompleteSettingsPanel.js # Settings toggle UI for emoji autocomplete
 │   ├── storage.js           # IndexedDB wallpaper blobs
 │   ├── wallpapers.js        # CRUD, validation, mode + order in chrome.storage
 │   ├── appSettings.js       # App name + custom greetings in chrome.storage
@@ -85,7 +91,8 @@ dtp-os/
 │   ├── popup.js             # Popup router: tool list and navigation
 │   ├── toolSettings.js      # Shared tool id constants
 │   ├── emojis.js            # Emoji picker UI, search, copy-to-clipboard
-│   ├── emoji-data.js        # Static curated emoji list with search keywords
+│   ├── emojiData.global.js  # Classic script: globalThis.DTP_EMOJI_LIST (~1,300 entries)
+│   ├── emoji-data.js        # ES module re-export of DTP_EMOJI_LIST for popup tools
 │   ├── youtubePlaylist.js   # YouTube uploads playlist tool
 │   ├── videoDownloader.js   # Video downloader tool (Lambda + S3 fetch)
 │   └── cloudflareDocker.js  # Cloudflare docker run converter tool
@@ -102,7 +109,7 @@ There is no build step, bundler, or package manager. The extension is loaded **a
 
 - **Manifest version**: 3 (service worker background, no persistent background page).
 - **Permissions**: `tabs`, `storage`, `scripting`, and `activeTab` (Form Inject on user gesture).
-- **Host permissions**: sway-sls video-download API Gateway and `*.amazonaws.com` for signed S3 download URLs (video downloader tool only).
+- **Host permissions**: `http://*/*` and `https://*/*` for emoji autocomplete content scripts; plus sway-sls video-download API Gateway and `*.amazonaws.com` for signed S3 download URLs; `*.twitch.tv` and GitHub for Twitch Ad Block.
 - **New tab override**: `chrome_url_overrides.newtab` points at `tab_override.html`, which is the primary mechanism for replacing the new tab page.
 - **Toolbar action**: `action.default_popup` points at `popup.html` for the browser-tools launcher.
 - **Icons**: `assets/48.png` and `assets/128.png` for the extension listing and toolbar.
@@ -132,10 +139,11 @@ Clicking the toolbar icon opens a compact popup separate from the new tab page.
 5. **Cloudflare Docker** — Paste `docker run ...`; inserts `-d --restart unless-stopped` after `docker run`; copy converted command.
 6. **Form Inject** — Scan or fill form fields on the active tab. Mock defaults and fill mode are configured under **Settings** (popup or new tab gear → Form Inject).
 7. **Twitch Ad Block** — Toggle in-stream and overlay ad blocking on `*.twitch.tv`. When enabled, registers a MAIN-world `document_start` content script with the vendored **vaft** engine from [ryanbr/TwitchAdSolutions](https://github.com/ryanbr/TwitchAdSolutions). Shows vendored version, last-updated date, and an on-demand “Check for updates” button against the GitHub releases API. Users must refresh open Twitch tabs after toggling.
+8. **Emoji Autocomplete** (Settings) — On by default. When enabled, registers an ISOLATED-world `document_idle` content script on `http://*/*` and `https://*/*` that shows emoji suggestions while typing `:query` in native `input`/`textarea` fields. Toggle under **Settings** (popup or new tab). Refresh open tabs after toggling.
 
 Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; `js/popup.js` routes by tool id and runs cleanup when navigating back.
 
-`js/toolSettings.js` exports shared tool id constants. `js/emoji-data.js` ships a static curated emoji list (~1,300 entries) with keyword tags for client-side search.
+`js/toolSettings.js` exports shared tool id constants. `js/emojiData.global.js` ships a static curated emoji list (~1,300 entries) as `globalThis.DTP_EMOJI_LIST`; `js/emoji-data.js` re-exports it for ES module popup tools. `popup.html` loads the classic data script before the module entry.
 
 ### `js/storage.js` and `js/wallpapers.js`
 
@@ -153,7 +161,8 @@ ES module (`"type": "module"` in `manifest.json`). Responsibilities:
 
 1. **Shared start page redirect** — Handles Chromium variants that initially open `chrome://startpageshared/` instead of going straight to the overridden new tab document.
 2. **Twitch Ad Block sync** — On install, startup, `chrome.storage.onChanged`, and popup message `dtp-twitch-adblock-sync`, calls `syncTwitchAdBlockRegistration()` to register or unregister the vaft content script on `*.twitch.tv`.
-3. **Form Inject relay** — Handles `dtp-form-inject` messages for tab script injection.
+3. **Emoji Autocomplete sync** — On install, startup, `chrome.storage.onChanged`, and message `dtp-emoji-autocomplete-sync`, calls `syncEmojiAutocompleteRegistration()` to register or unregister the ISOLATED-world `:query` picker on `http://*/*` / `https://*/*`. Enabled by default (`emojiAutocompleteEnabled !== false`).
+4. **Form Inject relay** — Handles `dtp-form-inject` messages for tab script injection.
 
 Shared start page flow:
 
@@ -169,18 +178,21 @@ This logic was added to support **Opera and other Chromium browsers** (see commi
 | Permission | Why |
 |------------|-----|
 | `tabs` | Read tab URL on create/update; redirect shared start page tabs to `tab_override.html` |
-| `storage` | Persist `displayMode`, `wallpaperOrder`, and tool settings (e.g. Form Inject custom defaults) |
-| `scripting` | Inject Form Inject engine into the active tab when the user clicks Scan or Fill |
-| `activeTab` | Temporary access to the active tab for Form Inject (no broad host permissions) |
+| `storage` | Persist `displayMode`, `wallpaperOrder`, and tool settings (e.g. Form Inject custom defaults, emoji autocomplete toggle) |
+| `scripting` | Inject Form Inject engine into the active tab when the user clicks Scan or Fill; register dynamic content scripts |
+| `activeTab` | Temporary access to the active tab for Form Inject |
+| `host_permissions` (`http://*/*`, `https://*/*`) | Emoji Autocomplete: register ISOLATED-world content script when enabled (default on) |
 | `host_permissions` (API Gateway + `*.amazonaws.com`) | Video Downloader: start/poll Lambda jobs and fetch signed S3 download URLs |
 | `host_permissions` (`*://*.twitch.tv/*`) | Twitch Ad Block: register MAIN-world content script when enabled |
 | `host_permissions` (`https://api.github.com/*`) | Twitch Ad Block: on-demand check for newer vaft releases |
 
-Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts or request `<all_urls>`.
+Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts.
 
 **Twitch Ad Block** uses `chrome.scripting.registerContentScripts` (not static manifest `content_scripts`) so the vaft engine is injected only when `twitchAdBlockEnabled` is true. The script runs in the page **MAIN** world at `document_start` to hook Twitch Web Workers before the player initializes. Vendored from `ryanbr/TwitchAdSolutions` tag `v68.4.0`; bump `VENDORED_VERSION` and `VENDORED_DATE` in `js/lib/twitchAdBlockMeta.js` when re-vendoring `js/inject/twitchAdBlockEngine.global.js`.
 
-Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, DOM writes to form fields on the active tab when Form Inject is used, and page-context script injection on Twitch when Twitch Ad Block is enabled.
+**Emoji Autocomplete** uses the same dynamic registration pattern. When `emojiAutocompleteEnabled` is not `false` (default on), registers `js/emojiData.global.js` + `js/inject/emojiAutocompleteEngine.global.js` with `css/emojiAutocomplete.css` in the **ISOLATED** world at `document_idle` on top-frame `http`/`https` pages. v1 watches native `input`/`textarea` only (not `contenteditable`). Users must refresh open tabs after toggling.
+
+Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, DOM writes to form fields on the active tab when Form Inject is used, page-context script injection on Twitch when Twitch Ad Block is enabled, and reading/writing text in focused form fields when Emoji Autocomplete is enabled.
 
 Users must **keep** the extension’s new-tab override when prompted (“page was changed by … extension”); declining disables the override.
 

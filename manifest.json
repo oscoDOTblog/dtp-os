@@ -1,7 +1,7 @@
 {
   "name": "dtp-os",
   "description": "dtp-os \u2014 new tab home and browser tools",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "manifest_version": 3,
   "icons": {
     "48": "assets/48.png",
@@ -14,6 +14,8 @@
     "activeTab"
   ],
   "host_permissions": [
+    "http://*/*",
+    "https://*/*",
     "http://127.0.0.1/*",
     "http://localhost/*",
     "https://xvbc38vi4h.execute-api.us-east-2.amazonaws.com/*",

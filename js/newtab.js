@@ -12,6 +12,7 @@ import {
 import { getAppName, getActiveGreetings, getBrandingEnabled, pickRandomGreeting, DEFAULT_APP_NAME } from "./appSettings.js";
 import { mountBrandingPanel } from "./settingsTool.js";
 import { mountFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
+import { mountEmojiAutocompleteSettingsPanel } from "./emojiAutocompleteSettingsPanel.js";
 import { initNewtabSettings } from "./newtabSettings.js";
 
 const backgroundLayer = document.getElementById("backgroundLayer");
@@ -383,6 +384,15 @@ async function init() {
         description: "Mock data for form filling",
         mount: (container) =>
           mountFormInjectSettingsPanel(container, {
+            setStatus,
+          }),
+      },
+      {
+        id: "emoji-autocomplete",
+        label: "Emoji Autocomplete",
+        description: "Suggest emojis while typing :query",
+        mount: (container) =>
+          mountEmojiAutocompleteSettingsPanel(container, {
             setStatus,
           }),
       },
