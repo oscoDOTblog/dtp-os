@@ -1,0 +1,27 @@
+/* The only rule that must live in the page's stylesheet: it targets a page
+   element. The floating button and toast render inside a shadow root instead.
+
+   Persists until the next copy or a page reload, so the copied region stays
+   identifiable. Outline and outline-offset do not affect page layout. */
+.dtp-copy-section-highlight {
+  outline: 2px solid rgba(255, 20, 147, 0.9) !important;
+  outline-offset: 2px;
+  animation: dtp-copy-section-flash-in 0.7s ease-out;
+}
+
+@keyframes dtp-copy-section-flash-in {
+  0% {
+    background-color: rgba(255, 20, 147, 0.22);
+    box-shadow: 0 0 0 6px rgba(255, 20, 147, 0.18);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 rgba(255, 20, 147, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtp-copy-section-highlight {
+    animation: none;
+  }
+}

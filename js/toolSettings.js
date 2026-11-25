@@ -7,6 +7,9 @@ export const TOOLS = {
   CURRENCY_CONVERTER: "currency-converter",
   POINTS_CONVERTER: "points-converter",
   COLORS: "colors",
+  COPY_SECTION: "copy-section",
   FORM_INJECT: "form-inject",
   TWITCH_AD_BLOCK: "twitch-ad-block",
+  APPLY_COPILOT: "apply-copilot",
+  VIDEODL_COOKIES: "videodl-cookies",
 };

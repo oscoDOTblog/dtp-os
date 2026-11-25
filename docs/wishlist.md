@@ -14,6 +14,8 @@
 * [ ] tools
     * [x] emoji pullup (type in emoji and it appears and copies to clipboard)
     * [x] emoji autocomplete on pages (`:query` in input/textarea; on by default, toggle in Settings)
+    * [x] copy a page section to clipboard (right-click menu + popup tool, Markdown or plain text)
+    * [x] Apply Copilot CDP setup (probe :9222, copy relaunch command for daily Chrome session)
     * [ ] color swatch picker and hex codes and save color combos 
-    * [ ] get local cookies 
+    * [x] get local cookies (VideoDL Cookies tool: Netscape dump to 127.0.0.1:8545)
     * [x] the three tools from waifuDOTbond (playlist generation, download video, cloudflare docker)

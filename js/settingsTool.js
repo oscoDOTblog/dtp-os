@@ -8,6 +8,7 @@ import {
 } from "./appSettings.js";
 import { createFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
 import { createEmojiAutocompleteSettingsPanel } from "./emojiAutocompleteSettingsPanel.js";
+import { createCopySectionSettingsPanel } from "./copySectionSettingsPanel.js";
 
 const GREETINGS_HELP_ID = "custom-greetings-help";
 
@@ -265,6 +266,7 @@ export function mountSettingsTool(container, { showToast }) {
     ids: {
       defaults: "settingsFormInjectDefaults",
       defaultsHelp: "settingsFormInjectDefaultsHelp",
+      profileSelect: "settingsFormInjectProfileSelect",
     },
     setStatus: (message, isError = false) => {
       showToast(message, isError);
@@ -280,13 +282,31 @@ export function mountSettingsTool(container, { showToast }) {
     },
   });
 
-  stack.append(brandingPanel, formInjectPanel, emojiAutocompletePanel);
+  const copySectionPanel = createCopySectionSettingsPanel({
+    ids: {
+      enabled: "settingsCopySectionEnabled",
+      format: "settingsCopySectionFormat",
+      button: "settingsCopySectionButton",
+      corner: "settingsCopySectionCorner",
+    },
+    setStatus: (message, isError = false) => {
+      showToast(message, isError);
+    },
+  });
+
+  stack.append(
+    brandingPanel,
+    formInjectPanel,
+    emojiAutocompletePanel,
+    copySectionPanel
+  );
   container.appendChild(stack);
 
   return () => {
     brandingPanel.cleanup?.();
     formInjectPanel.cleanup?.();
     emojiAutocompletePanel.cleanup?.();
+    copySectionPanel.cleanup?.();
   };
 }
 

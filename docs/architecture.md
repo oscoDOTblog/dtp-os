@@ -42,6 +42,8 @@ flowchart LR
 |-------------|-----------|--------|
 | Open a new tab (typical Chrome/Edge) | `tab_override.html` + `js/newtab.js` | Embed or wallpaper UI per saved `displayMode` |
 | Click toolbar icon | `popup.html` + `js/popup.js` | Tool launcher list; pick a tool to open its panel |
+| Right-click a page | `js/inject/copySectionEngine.global.js` via `background.js` | dtp-os menu copies the clicked section, main content, or whole page |
+| Click the floating page button | `js/inject/copySectionEngine.global.js` | Copies main content in one click |
 | Wallpaper mode, images saved | `pickRandomWallpaperId()` on load | Random full-viewport background |
 | New tab via shared start page (`chrome://startpageshared/…`) | `background.js` listens and redirects | Same `tab_override.html` experience |
 
@@ -56,16 +58,23 @@ dtp-os/
 ├── popup.html          # Toolbar popup shell (tool launcher + tool panels)
 ├── tab_override.html   # New tab shell (layers + controls)
 ├── css/
+│   ├── tokens.css      # Shared Netflix-dark + hot pink design tokens
 │   ├── newtab.css      # New tab layout and settings panel
 │   ├── popup.css       # Toolbar popup layout and tools
-│   └── emojiAutocomplete.css # In-page :query emoji picker overlay
+│   ├── coss-button.css     # Vanilla coss Button variants/sizes
+│   ├── coss-field.css      # Vanilla coss Field slots (label, description, group)
+│   ├── coss-switch.css     # Vanilla coss Switch (preference toggles)
+│   ├── coss-toggle-group.css # Vanilla coss ToggleGroup (segmented + 2x2 grid)
+│   ├── emojiAutocomplete.css # In-page :query emoji picker overlay
+│   └── copySection.css     # In-page copied-region outline + toast
 ├── js/
 │   ├── lib/
 │   │   ├── config.js                 # VIDEO_DL_API_URL (sway-sls Lambda)
 │   │   ├── videodlClient.js          # Async video download API client
 │   │   ├── youtubeChannelPlaylist.js # UC → UU playlist URL logic
+│   │   ├── contentScriptRegistration.js # Idempotent dynamic content-script register/update
 │   │   ├── formInjectDefaults.js     # Built-in mock values for common form fields
-│   │   ├── formInjectSettings.js     # Custom defaults persistence (chrome.storage.local)
+│   │   ├── formInjectSettings.js     # Profile + defaults persistence (chrome.storage.local)
 │   │   ├── formInjectPresets.js      # Site-specific presets (e.g. Wendy intake)
 │   │   ├── formInjectClient.js       # activeTab + scripting bridge for Form Inject
 │   │   ├── twitchAdBlockSettings.js  # Twitch Ad Block enable flag (chrome.storage.local)
@@ -74,14 +83,29 @@ dtp-os/
 │   │   ├── twitchAdBlockUpdateClient.js # On-demand GitHub release check
 │   │   ├── emojiSearch.js            # Shared emoji query normalize/filter helpers
 │   │   ├── emojiAutocompleteSettings.js # Emoji autocomplete enable flag (default on)
-│   │   └── emojiAutocompleteRegistration.js # Dynamic ISOLATED-world content script registration
+│   │   ├── emojiAutocompleteRegistration.js # Dynamic ISOLATED-world content script registration
+│   │   ├── cossButton.js             # Vanilla coss Button factory
+│   │   ├── cossField.js              # Vanilla coss Field composition helpers
+│   │   ├── cossSwitch.js             # Vanilla coss Switch + switch-with-description field
+│   │   ├── cossToggleGroup.js        # Vanilla coss single-select ToggleGroup
+│   │   ├── copySectionSettings.js    # Copy Section enable flag + clipboard format
+│   │   ├── copySectionRegistration.js # Dynamic content script + context menu registration
+│   │   ├── copySectionClient.js      # activeTab + scripting bridge for the popup tool
+│   │   ├── applyCopilotSettings.js   # CDP URL + relaunch script path (chrome.storage.local)
+│   │   ├── videodlCookieSettings.js  # VideoDL loopback URL + auto-sync prefs
+│   │   └── videodlCookieSync.js      # Netscape convert + loopback cookie upload
 │   ├── inject/
 │   │   ├── formInjectEngine.global.js # In-page scan/fill engine (injected via scripting)
 │   │   ├── twitchAdBlockEngine.global.js # Vendored vaft engine (Twitch ad blocking)
-│   │   └── emojiAutocompleteEngine.global.js # In-page :query emoji autocomplete
+│   │   ├── emojiAutocompleteEngine.global.js # In-page :query emoji autocomplete
+│   │   └── copySectionEngine.global.js # In-page region detection + Markdown serializer
 │   ├── formInject.js        # Form Inject popup tool
 │   ├── twitchAdBlock.js     # Twitch Ad Block popup tool
+│   ├── copySection.js       # Copy Section popup tool
+│   ├── applyCopilotTool.js  # Apply Copilot CDP status + relaunch helper
+│   ├── videodlCookiesTool.js # Push YouTube cookies to local VideoDL
 │   ├── emojiAutocompleteSettingsPanel.js # Settings toggle UI for emoji autocomplete
+│   ├── copySectionSettingsPanel.js # Settings toggle + format UI for Copy Section
 │   ├── storage.js           # IndexedDB wallpaper blobs
 │   ├── wallpapers.js        # CRUD, validation, mode + order in chrome.storage
 │   ├── appSettings.js       # App name + custom greetings in chrome.storage
@@ -102,6 +126,19 @@ dtp-os/
 ```
 
 There is no build step, bundler, or package manager. The extension is loaded **as-is** via “Load unpacked” in the browser.
+
+### coss primitives in vanilla DOM
+
+This repo has no React or Tailwind, so coss primitives are translated into plain DOM factories in `js/lib/coss*.js` with matching stylesheets in `css/coss-*.css`. Each factory sets the same `data-slot` attributes and state attributes that coss/Base UI emit (`data-slot="switch"`, `data-checked`, `data-pressed`, …), and the CSS selects on those slots rather than on bespoke class names, so markup stays recognisable against the coss docs.
+
+| Primitive | Factory | Notes |
+|---|---|---|
+| Button | `createCossButton` | Variants and sizes mirror `@coss/button` |
+| Field | `createCossField`, `createCossFieldLabel`, `createCossFieldDescription`, `createCossFieldGroup` | Label/description/control composition |
+| Switch | `createCossSwitch`, `createCossSwitchField` | `role="switch"` button + thumb; used for binary preference toggles per coss guidance (Checkbox is reserved for consent / multi-select) |
+| ToggleGroup | `createCossToggleGroup` | Single-select, `aria-pressed` items, roving arrow-key focus; `layout: "grid"` renders a 2×2 set |
+
+Short option lists use ToggleGroup rather than a Select popup, following the coss Select guidance that very short lists with visible options are better served by an inline control. Because `button` is a labelable element, `FieldLabel htmlFor` targets Switch triggers directly; icon-only ToggleGroup items carry `aria-label` and the group is wired to its field label with `aria-labelledby`.
 
 ## Components
 
@@ -132,14 +169,16 @@ To point the embed at a different home, change the iframe `src` in `tab_override
 
 Clicking the toolbar icon opens a compact popup separate from the new tab page.
 
-1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject, Twitch Ad Block (implemented); Colors (stub marked “Soon”).
+1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, VideoDL Cookies, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject, Twitch Ad Block, Copy Section, Apply Copilot (implemented); Colors (stub marked “Soon”).
 2. **Emojis picker** — Search bar and scrollable emoji grid with client-side filter. Clicking an emoji copies it to the clipboard, shows a brief toast, then closes the popup.
 3. **YouTube Playlist** — Paste channel page source, URL, or `UC...` ID; live-builds uploads playlist URL (`UC` → `UU`); copy and open in YouTube. Client-only (`js/lib/youtubeChannelPlaylist.js`).
 4. **Video Downloader** — Paste a social URL; polls sway-sls Lambda (`js/lib/videodlClient.js`), then fetches the signed file and triggers a browser download.
 5. **Cloudflare Docker** — Paste `docker run ...`; inserts `-d --restart unless-stopped` after `docker run`; copy converted command.
-6. **Form Inject** — Scan or fill form fields on the active tab. Mock defaults and fill mode are configured under **Settings** (popup or new tab gear → Form Inject).
+6. **Form Inject** — Scan or fill form fields on the active tab. Named mock-data profiles and fill mode are configured under **Settings** (popup or new tab gear → Form Inject); the popup can switch the active profile before fill. **Auto** fills only fields with a known profile/default/preset value and leaves unknowns blank; **Generic only** invents values for recognized field types (email, phone, name, …) but still skips free-text/essay questions and unrecognized fields.
 7. **Twitch Ad Block** — Toggle in-stream and overlay ad blocking on `*.twitch.tv`. When enabled, registers a MAIN-world `document_start` content script with the vendored **vaft** engine from [ryanbr/TwitchAdSolutions](https://github.com/ryanbr/TwitchAdSolutions). Shows vendored version, last-updated date, and an on-demand “Check for updates” button against the GitHub releases API. Users must refresh open Twitch tabs after toggling.
 8. **Emoji Autocomplete** (Settings) — On by default. When enabled, registers an ISOLATED-world `document_idle` content script on `http://*/*` and `https://*/*` that shows emoji suggestions while typing `:query` in native `input`/`textarea` fields. Toggle under **Settings** (popup or new tab). Refresh open tabs after toggling.
+9. **Copy Section** — Copies a page region to the clipboard as Markdown (default) or plain text. Buttons for **Copy main content** and **Copy whole page** act on the active tab and show a character count plus a preview. In the page itself, a floating copy button sits in a configurable corner and a right-click menu (**dtp-os → Copy this section / Copy main content / Copy whole page**) covers the rest. Format, the right-click toggle, the button toggle, and the button corner live under **Settings**.
+10. **VideoDL Cookies** — Reads YouTube/Google cookies from this Chrome profile (`chrome.cookies`, optional permission), converts them to Netscape format, and POSTs the file to local VideoDL at `http://127.0.0.1:8545/cookies/upload`. **Sync now** plus optional 6-hour auto-sync (`chrome.alarms`). Status shows reachability, last sync time, and cookie count — never cookie values. API URL must be loopback (`127.0.0.1` or `localhost`).
 
 Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; `js/popup.js` routes by tool id and runs cleanup when navigating back.
 
@@ -152,6 +191,12 @@ Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; 
 | IndexedDB `dtp-os` / `wallpapers` | `id` | `{ id, blob, mimeType, addedAt }` |
 | `chrome.storage.local` | `displayMode` | `"embed"` \| `"wallpaper"` |
 | `chrome.storage.local` | `wallpaperOrder` | `string[]` of IDs (gallery order) |
+| `chrome.storage.local` | `copySectionEnabled` | `boolean` (default on) — right-click menu + floating button |
+| `chrome.storage.local` | `copySectionFormat` | `"markdown"` \| `"plain"` |
+| `chrome.storage.local` | `copySectionButtonEnabled` | `boolean` (default on) — floating button |
+| `chrome.storage.local` | `copySectionButtonCorner` | `"bottom-left"` (default) \| `"bottom-right"` \| `"top-right"` \| `"top-left"` |
+| `chrome.storage.local` | `videodlCookieSettings` | `{ videodlCookieApiUrl, videodlCookieAutoSync, videodlCookieIntervalMinutes }` |
+| `chrome.storage.local` | `videodlCookieSyncState` | `{ lastSyncedAt, cookieCount, lastError, signedIn }` — no cookie values |
 
 Upload rules: JPEG/PNG/WebP, max 5 MB per file, max 50 images. `syncWallpaperOrderWithDatabase()` reconciles the order array with IndexedDB on load.
 
@@ -163,6 +208,9 @@ ES module (`"type": "module"` in `manifest.json`). Responsibilities:
 2. **Twitch Ad Block sync** — On install, startup, `chrome.storage.onChanged`, and popup message `dtp-twitch-adblock-sync`, calls `syncTwitchAdBlockRegistration()` to register or unregister the vaft content script on `*.twitch.tv`.
 3. **Emoji Autocomplete sync** — On install, startup, `chrome.storage.onChanged`, and message `dtp-emoji-autocomplete-sync`, calls `syncEmojiAutocompleteRegistration()` to register or unregister the ISOLATED-world `:query` picker on `http://*/*` / `https://*/*`. Enabled by default (`emojiAutocompleteEnabled !== false`).
 4. **Form Inject relay** — Handles `dtp-form-inject` messages for tab script injection.
+5. **Copy Section sync** — On install, startup, `chrome.storage.onChanged`, and message `dtp-copy-section-sync`, calls `syncCopySectionRegistration()` to register or unregister both the ISOLATED-world content script and the `chrome.contextMenus` items. Enabled by default (`copySectionEnabled !== false`).
+6. **Copy Section menu handler** — `chrome.contextMenus.onClicked` maps the menu id to a mode (`section` / `main` / `page`), reads the saved format, then injects the engine into the clicked frame and runs it.
+7. **VideoDL cookie sync** — Popup message `dtp-videodl-cookies-sync` collects allowlisted YouTube/Google cookies and uploads a Netscape file to the configured loopback VideoDL API. `dtp-videodl-cookies-alarm-sync`, install/startup, and `videodlCookieSettings` storage changes create or clear alarm `dtp-videodl-cookie-sync`. Auto-sync is off by default and never requests the optional `cookies` permission (that prompt is user-gesture only).
 
 Shared start page flow:
 
@@ -178,21 +226,44 @@ This logic was added to support **Opera and other Chromium browsers** (see commi
 | Permission | Why |
 |------------|-----|
 | `tabs` | Read tab URL on create/update; redirect shared start page tabs to `tab_override.html` |
-| `storage` | Persist `displayMode`, `wallpaperOrder`, and tool settings (e.g. Form Inject custom defaults, emoji autocomplete toggle) |
+| `storage` | Persist `displayMode`, `wallpaperOrder`, and tool settings (e.g. Form Inject profiles, emoji autocomplete toggle) |
 | `scripting` | Inject Form Inject engine into the active tab when the user clicks Scan or Fill; register dynamic content scripts |
 | `activeTab` | Temporary access to the active tab for Form Inject |
+| `contextMenus` | Copy Section: right-click menu on `http`/`https` pages |
+| `clipboardWrite` | Copy Section: `document.execCommand("copy")` fallback in the page, since context-menu clicks carry no user activation |
+| `alarms` | VideoDL Cookies: wake the service worker for optional 6-hour auto-sync |
+| `optional_permissions` (`cookies`) | VideoDL Cookies: read YouTube/Google cookies after the user grants access on Sync / auto-sync enable |
 | `host_permissions` (`http://*/*`, `https://*/*`) | Emoji Autocomplete: register ISOLATED-world content script when enabled (default on) |
+| `host_permissions` (`http://127.0.0.1/*`, `http://localhost/*`) | VideoDL Cookies and Apply Copilot: loopback fetches |
 | `host_permissions` (API Gateway + `*.amazonaws.com`) | Video Downloader: start/poll Lambda jobs and fetch signed S3 download URLs |
 | `host_permissions` (`*://*.twitch.tv/*`) | Twitch Ad Block: register MAIN-world content script when enabled |
 | `host_permissions` (`https://api.github.com/*`) | Twitch Ad Block: on-demand check for newer vaft releases |
 
 Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts.
 
+Dynamic content scripts (Emoji Autocomplete, Twitch Ad Block, Copy Section) use `js/lib/contentScriptRegistration.js`: `getRegisteredContentScripts` → `updateContentScripts` when the id already exists (common after reload with `persistAcrossSessions`), otherwise `registerContentScripts`, with a fallback to update on duplicate-id races. Each script id is serialized through a queue.
+
 **Twitch Ad Block** uses `chrome.scripting.registerContentScripts` (not static manifest `content_scripts`) so the vaft engine is injected only when `twitchAdBlockEnabled` is true. The script runs in the page **MAIN** world at `document_start` to hook Twitch Web Workers before the player initializes. Vendored from `ryanbr/TwitchAdSolutions` tag `v68.4.0`; bump `VENDORED_VERSION` and `VENDORED_DATE` in `js/lib/twitchAdBlockMeta.js` when re-vendoring `js/inject/twitchAdBlockEngine.global.js`.
+
+**Copy Section** uses the same dynamic registration pattern, registering the engine in the **ISOLATED** world at `document_idle` on all frames of `http`/`https` pages plus a `chrome.contextMenus` group. The persistent script exists only to record the `contextmenu` event target, which the menu-click handler needs to know *which* element was right-clicked — `contextMenus.onClicked` does not report it. On a tab loaded before the feature was enabled there is no recorded target, so **Copy this section** degrades to main-content detection until the tab is refreshed.
+
+Region detection is a dependency-free heuristic in three tiers: semantic landmarks (`main`, `[role="main"]`, `article`, then common content ids and classes), a Readability-style score over the parents of text-bearing blocks, and finally `document.body`. Extraction strips `nav`/`header`/`footer`/`aside`, hidden elements, and containers whose id, class, or role matches known page furniture — except the region the user explicitly pointed at. Output is Markdown by default (headings, lists, links, code fences, blockquotes, tables, images) or plain text.
+
+The copied region keeps a hot pink outline so it stays identifiable after the toast fades. The outline is cleared only by the next copy in that document or by a reload — never on a timer — and uses `outline` / `outline-offset`, which do not affect page layout.
+
+The floating copy button and the toast render inside a **shadow root** on a single host element appended to `document.documentElement`, so the host page's stylesheet cannot restyle them and our rules cannot leak onto the page. The host carries inline `!important` positioning so page CSS cannot hide or move it, and it is `pointer-events: none` except for the button itself. Only `css/copySection.css` stays in the page stylesheet, because the highlight rule has to target a page element.
+
+The button appears only in the top frame, and only when both `copySectionEnabled` and `copySectionButtonEnabled` are set. The engine reads those from `chrome.storage.local` directly and listens for `chrome.storage.onChanged`, so toggling the button or changing its corner takes effect in open tabs without a refresh. Clicking it copies main content; because that is a genuine in-page click it carries user activation, so `navigator.clipboard.writeText()` succeeds without the `execCommand` fallback.
+
+Clipboard writes take the reliable path per caller: the popup receives the extracted text and calls `navigator.clipboard.writeText()` itself, where the button click supplies user activation. The context-menu path must write from the page, so it tries `navigator.clipboard.writeText()` and falls back to a hidden-textarea `document.execCommand("copy")`.
 
 **Emoji Autocomplete** uses the same dynamic registration pattern. When `emojiAutocompleteEnabled` is not `false` (default on), registers `js/emojiData.global.js` + `js/inject/emojiAutocompleteEngine.global.js` with `css/emojiAutocomplete.css` in the **ISOLATED** world at `document_idle` on top-frame `http`/`https` pages. v1 watches native `input`/`textarea` only (not `contenteditable`). Users must refresh open tabs after toggling.
 
-Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, DOM writes to form fields on the active tab when Form Inject is used, page-context script injection on Twitch when Twitch Ad Block is enabled, and reading/writing text in focused form fields when Emoji Autocomplete is enabled.
+**Apply Copilot** is a popup-only helper for the CV Apply Copilot agent (`dtp-yui`). It probes `http://127.0.0.1:9222/json/version` (or a saved CDP URL), shows Ready / Not listening, and copies a Terminal command to run `relaunch-chrome-cdp.sh` so the user’s **daily Chrome profile** restarts with `--remote-debugging-port`. The extension cannot enable remote debugging on an already-running Chrome process (no `nativeMessaging` / `chrome.debugger` in this pass). Settings (`applyCopilotCdpUrl`, script path) live under `applyCopilotSettings` in `chrome.storage.local`.
+
+**VideoDL Cookies** is a popup-only helper for local `dtp-videodl`. Cookie values are never logged, never shown in the UI, and are POSTed only to a validated loopback VideoDL origin (`http://127.0.0.1` or `http://localhost`). The optional `cookies` permission is requested on the user’s first Sync or auto-sync enable so other tools keep working if it is declined.
+
+Other popup tools remain clipboard-only or fetch remote APIs. Risk surface includes: embedded iframe content, tab URL inspection in the service worker, locally stored user images in IndexedDB, clipboard writes from popup tools (user-initiated), outbound `fetch` to the video-download API when the user starts a download, DOM writes to form fields on the active tab when Form Inject is used, page-context script injection on Twitch when Twitch Ad Block is enabled, reading/writing text in focused form fields when Emoji Autocomplete is enabled, and (after optional grant) reading YouTube/Google cookies to push them to local VideoDL.
 
 Users must **keep** the extension’s new-tab override when prompted (“page was changed by … extension”); declining disables the override.
 
@@ -223,7 +294,7 @@ There are no automated tests in this repo.
 
 ## Relationship to DTP
 
-The **dtp** parent folder also contains projects such as `dtp-videodl` (desktop/web tooling). **dtp-os** is separate: a lightweight browser shell for a fixed “home” URL on every new tab, not a Node/Python app. Renaming or repointing the embedded URL is the main way to align this extension with DTP or osco branding without changing extension architecture.
+The **dtp** parent folder also contains projects such as `dtp-videodl` (desktop/web tooling). **dtp-os** is separate: a lightweight browser shell for a fixed “home” URL on every new tab, not a Node/Python app. The VideoDL Cookies tool is the one cross-link: it can push this Chrome profile’s YouTube cookies to a loopback VideoDL API. Renaming or repointing the embedded URL is the main way to align this extension with DTP or osco branding without changing extension architecture.
 
 ## References
 

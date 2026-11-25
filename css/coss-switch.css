@@ -1,0 +1,65 @@
+/* coss-aligned Switch for vanilla DOM (dtp-os has no React/coss runtime).
+   Mirrors @coss/switch slots and Base UI data-checked / data-unchecked state. */
+
+[data-slot="switch"] {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  box-sizing: border-box;
+  width: 2.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-muted);
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+[data-slot="switch"]:hover:not(:disabled) {
+  border-color: var(--hot-pink-border);
+}
+
+[data-slot="switch"]:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+[data-slot="switch"][data-checked] {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+[data-slot="switch"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-slot="switch-thumb"] {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-left: 0.1875rem;
+  border-radius: 999px;
+  background: var(--fg-muted);
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+[data-slot="switch"][data-checked] [data-slot="switch-thumb"] {
+  transform: translateX(1rem);
+  background: var(--primary-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="switch"],
+  [data-slot="switch-thumb"] {
+    transition: none;
+  }
+}

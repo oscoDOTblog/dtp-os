@@ -3,10 +3,13 @@ import { mountEmojisTool } from "./emojis.js";
 import { mountYoutubePlaylistTool } from "./youtubePlaylist.js";
 import { mountVideoDownloaderTool } from "./videoDownloader.js";
 import { mountCloudflareDockerTool } from "./cloudflareDocker.js";
+import { mountCopySectionTool } from "./copySection.js";
 import { mountCurrencyConverterTool } from "./currencyConverter.js";
 import { mountPointsConverterTool } from "./pointsConverter.js";
 import { mountFormInjectTool } from "./formInject.js";
 import { mountTwitchAdBlockTool } from "./twitchAdBlock.js";
+import { mountApplyCopilotTool } from "./applyCopilotTool.js";
+import { mountVideodlCookiesTool } from "./videodlCookiesTool.js";
 import { TOOLS } from "./toolSettings.js";
 import { getToolIconPath } from "./toolIcons.js";
 import {
@@ -17,14 +20,17 @@ import {
 } from "./lib/toolFavorites.js";
 
 const TOOL_DEFINITIONS = [
+  { id: TOOLS.APPLY_COPILOT, label: "Apply Copilot", implemented: true },
   { id: TOOLS.CLOUDFLARE_DOCKER, label: "Cloudflare Docker", implemented: true },
   { id: TOOLS.COLORS, label: "Colors", implemented: false },
+  { id: TOOLS.COPY_SECTION, label: "Copy Section", implemented: true },
   { id: TOOLS.CURRENCY_CONVERTER, label: "Currency Converter", implemented: true },
   { id: TOOLS.EMOJIS, label: "Emojis", implemented: true },
   { id: TOOLS.FORM_INJECT, label: "Form Inject", implemented: true },
   { id: TOOLS.POINTS_CONVERTER, label: "Points Conversion", implemented: true },
   { id: TOOLS.TWITCH_AD_BLOCK, label: "Twitch Ad Block", implemented: true },
   { id: TOOLS.VIDEO_DOWNLOADER, label: "Video Downloader", implemented: true },
+  { id: TOOLS.VIDEODL_COOKIES, label: "VideoDL Cookies", implemented: true },
   { id: TOOLS.YOUTUBE_PLAYLIST, label: "YouTube Playlist", implemented: true },
 ];
 
@@ -42,14 +48,17 @@ let favoriteIds = [];
 const popupTitle = document.querySelector(".popup-title");
 
 const TOOL_MOUNTERS = {
+  [TOOLS.APPLY_COPILOT]: mountApplyCopilotTool,
   [TOOLS.EMOJIS]: mountEmojisTool,
   [TOOLS.YOUTUBE_PLAYLIST]: mountYoutubePlaylistTool,
   [TOOLS.VIDEO_DOWNLOADER]: mountVideoDownloaderTool,
   [TOOLS.CLOUDFLARE_DOCKER]: mountCloudflareDockerTool,
+  [TOOLS.COPY_SECTION]: mountCopySectionTool,
   [TOOLS.CURRENCY_CONVERTER]: mountCurrencyConverterTool,
   [TOOLS.POINTS_CONVERTER]: mountPointsConverterTool,
   [TOOLS.FORM_INJECT]: mountFormInjectTool,
   [TOOLS.TWITCH_AD_BLOCK]: mountTwitchAdBlockTool,
+  [TOOLS.VIDEODL_COOKIES]: mountVideodlCookiesTool,
 };
 
 function showToast(message, isError = false) {

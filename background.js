@@ -2,6 +2,21 @@ import { syncTwitchAdBlockRegistration } from "./js/lib/twitchAdBlockRegistratio
 import { getTwitchAdBlockEnabled } from "./js/lib/twitchAdBlockSettings.js";
 import { syncEmojiAutocompleteRegistration } from "./js/lib/emojiAutocompleteRegistration.js";
 import { getEmojiAutocompleteEnabled } from "./js/lib/emojiAutocompleteSettings.js";
+import {
+  COPY_SECTION_CSS_FILE,
+  COPY_SECTION_ENGINE_FILE,
+  COPY_SECTION_MENU_MODES,
+  syncCopySectionRegistration,
+} from "./js/lib/copySectionRegistration.js";
+import {
+  getCopySectionEnabled,
+  getCopySectionFormat,
+} from "./js/lib/copySectionSettings.js";
+import { ALARM_NAME, SETTINGS_KEY } from "./js/lib/videodlCookieSettings.js";
+import {
+  syncVideodlCookieAlarm,
+  syncVideodlCookies,
+} from "./js/lib/videodlCookieSync.js";
 
 const FORM_INJECT_ENGINE_FILE = "js/inject/formInjectEngine.global.js";
 
@@ -15,10 +30,16 @@ async function syncEmojiAutocompleteFromStorage() {
   await syncEmojiAutocompleteRegistration(enabled);
 }
 
+async function syncCopySectionFromStorage() {
+  const enabled = await getCopySectionEnabled();
+  await syncCopySectionRegistration(enabled);
+}
+
 async function syncAllContentScriptsFromStorage() {
   await Promise.all([
     syncTwitchAdBlockFromStorage(),
     syncEmojiAutocompleteFromStorage(),
+    syncCopySectionFromStorage(),
   ]);
 }
 
@@ -26,11 +47,17 @@ chrome.runtime.onInstalled.addListener(() => {
   syncAllContentScriptsFromStorage().catch((err) => {
     console.error("Content script install sync failed:", err);
   });
+  syncVideodlCookieAlarm().catch((err) => {
+    console.error("VideoDL cookie alarm install sync failed:", err);
+  });
 });
 
 chrome.runtime.onStartup.addListener(() => {
   syncAllContentScriptsFromStorage().catch((err) => {
     console.error("Content script startup sync failed:", err);
+  });
+  syncVideodlCookieAlarm().catch((err) => {
+    console.error("VideoDL cookie alarm startup sync failed:", err);
   });
 });
 
@@ -52,6 +79,66 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       console.error("Emoji autocomplete storage sync failed:", err);
     });
   }
+
+  if (changes.copySectionEnabled) {
+    const enabled = changes.copySectionEnabled.newValue !== false;
+    syncCopySectionRegistration(enabled).catch((err) => {
+      console.error("Copy Section storage sync failed:", err);
+    });
+  }
+
+  if (changes[SETTINGS_KEY]) {
+    syncVideodlCookieAlarm().catch((err) => {
+      console.error("VideoDL cookie alarm storage sync failed:", err);
+    });
+  }
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm?.name !== ALARM_NAME) {
+    return;
+  }
+  syncVideodlCookies({ requestPermission: false }).catch((err) => {
+    console.error("VideoDL cookie auto-sync failed:", err?.message || err);
+  });
+});
+
+async function runCopySectionInTab(tabId, frameId, mode) {
+  const format = await getCopySectionFormat();
+  const target =
+    typeof frameId === "number" ? { tabId, frameIds: [frameId] } : { tabId };
+
+  await chrome.scripting
+    .insertCSS({ target, files: [COPY_SECTION_CSS_FILE] })
+    .catch(() => {});
+
+  await chrome.scripting.executeScript({
+    target,
+    files: [COPY_SECTION_ENGINE_FILE],
+  });
+
+  await chrome.scripting.executeScript({
+    target,
+    func: (payload) => {
+      const engine = globalThis.DtpCopySectionEngine;
+      if (!engine) {
+        throw new Error("Copy Section engine failed to load.");
+      }
+      return engine.run(payload);
+    },
+    args: [{ mode, format, copyInPage: true }],
+  });
+}
+
+chrome.contextMenus?.onClicked?.addListener((info, tab) => {
+  const mode = COPY_SECTION_MENU_MODES[info.menuItemId];
+  if (!mode || !tab?.id) {
+    return;
+  }
+
+  runCopySectionInTab(tab.id, info.frameId, mode).catch((err) => {
+    console.error("Copy Section failed:", err);
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -88,6 +175,58 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ? message.enabled
             : await getEmojiAutocompleteEnabled();
         await syncEmojiAutocompleteRegistration(enabled);
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err?.message || String(err),
+        });
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === "dtp-copy-section-sync") {
+    (async () => {
+      try {
+        const enabled =
+          typeof message.enabled === "boolean"
+            ? message.enabled
+            : await getCopySectionEnabled();
+        await syncCopySectionRegistration(enabled);
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err?.message || String(err),
+        });
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === "dtp-videodl-cookies-sync") {
+    (async () => {
+      try {
+        const result = await syncVideodlCookies({ requestPermission: false });
+        sendResponse({ ok: true, ...result });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err?.message || String(err),
+        });
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === "dtp-videodl-cookies-alarm-sync") {
+    (async () => {
+      try {
+        await syncVideodlCookieAlarm();
         sendResponse({ ok: true });
       } catch (err) {
         sendResponse({

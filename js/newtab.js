@@ -13,6 +13,7 @@ import { getAppName, getActiveGreetings, getBrandingEnabled, pickRandomGreeting,
 import { mountBrandingPanel } from "./settingsTool.js";
 import { mountFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
 import { mountEmojiAutocompleteSettingsPanel } from "./emojiAutocompleteSettingsPanel.js";
+import { mountCopySectionSettingsPanel } from "./copySectionSettingsPanel.js";
 import { initNewtabSettings } from "./newtabSettings.js";
 
 const backgroundLayer = document.getElementById("backgroundLayer");
@@ -393,6 +394,15 @@ async function init() {
         description: "Suggest emojis while typing :query",
         mount: (container) =>
           mountEmojiAutocompleteSettingsPanel(container, {
+            setStatus,
+          }),
+      },
+      {
+        id: "copy-section",
+        label: "Copy Section",
+        description: "Right-click to copy page content",
+        mount: (container) =>
+          mountCopySectionSettingsPanel(container, {
             setStatus,
           }),
       },

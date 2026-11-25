@@ -2,7 +2,7 @@
 
 Manifest V3 Chromium extension: custom new-tab home plus a toolbar popup of browser tools. Forked from [buildspace-os](https://github.com/buildspace/buildspace-os), with Opera/shared-start-page fixes and a growing tool set.
 
-No build step — load the folder unpacked.
+No build step — load the folder unpacked. Cursor skills for UI guidance live under `.cursor/skills/` (`coss`, `coss-particles`, `frontend-design`); styling stays vanilla CSS via `css/tokens.css`.
 
 ## Features
 
@@ -12,8 +12,9 @@ No build step — load the folder unpacked.
 - **Wallpaper mode** — Local JPEG/PNG/WebP backgrounds (IndexedDB, max 50 × 5 MB)
 - **Shuffle** — Random wallpaper per new tab; shuffle button re-rolls on the current tab
 - **Branding** — Custom app name and rotating greetings (JSON array, or 105 built-ins)
-- **Settings modal** — Gear panel for display mode, wallpapers, branding, Form Inject defaults, and emoji autocomplete
+- **Settings modal** — Gear panel for display mode, wallpapers, branding, Form Inject profiles, emoji autocomplete, and Copy Section
 - **Emoji Autocomplete** — On by default: type `:smile` in page `input`/`textarea` fields for emoji suggestions (toggle in Settings)
+- **Copy Section** — On by default: a floating copy button on every page, plus right-click **dtp-os → Copy this section / Copy main content / Copy whole page** (toggles and button corner in Settings)
 
 ### Toolbar tools
 
@@ -21,14 +22,16 @@ Click the extension icon for the tool launcher (favorites pin tools to the top):
 
 | Tool | What it does |
 |------|----------------|
+| **Copy Section** | Copy a page region as Markdown or plain text; also via right-click or the in-page button |
 | **Emojis** | Searchable emoji grid; click to copy |
 | **YouTube Playlist** | Channel URL/`UC…` ID → uploads playlist (`UU…`); copy or open |
 | **Video Downloader** | Paste a social URL; download via sway-sls Lambda + signed S3 |
 | **Cloudflare Docker** | `docker run …` → insert `-d --restart unless-stopped` |
 | **Currency Converter** | Live ECB rates via Frankfurter |
 | **Points Conversion** | Loyalty points → USD estimate (cents-per-mile valuations) |
-| **Form Inject** | Scan/fill form fields on the active tab with mock defaults & presets |
+| **Form Inject** | Scan/fill form fields on the active tab with mock profiles & presets |
 | **Twitch Ad Block** | Optional in-stream/overlay blocking on `*.twitch.tv` (vendored [vaft](https://github.com/ryanbr/TwitchAdSolutions)); check for updates |
+| **VideoDL Cookies** | Push YouTube cookies from this Chrome profile to local VideoDL (`127.0.0.1:8545`); optional 6-hour auto-sync |
 
 **Colors** is listed as coming soon.
 

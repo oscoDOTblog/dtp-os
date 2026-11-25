@@ -43,6 +43,59 @@
     );
   }
 
+  function expandNamePartTokens(tokens) {
+    const set = new Set(tokens);
+    const hasNameWord = set.has("name") || set.has("fullname");
+    const expanded = [...tokens];
+
+    // "First Name" / first_name / given-name split into separate tokens;
+    // rejoin so lookups hit firstname/lastname instead of bare "name".
+    if (
+      !set.has("firstname") &&
+      hasNameWord &&
+      (set.has("first") || set.has("given") || set.has("fname"))
+    ) {
+      expanded.push("firstname");
+    }
+    if (
+      !set.has("lastname") &&
+      hasNameWord &&
+      (set.has("last") || set.has("family") || set.has("sur") || set.has("lname") || set.has("surname"))
+    ) {
+      expanded.push("lastname");
+    }
+    if (!set.has("middlename") && hasNameWord && set.has("middle")) {
+      expanded.push("middlename");
+    }
+
+    return expanded;
+  }
+
+  function detectNamePartKey(tokens) {
+    const set = new Set(tokens);
+    if (
+      set.has("firstname") ||
+      set.has("fname") ||
+      set.has("givenname") ||
+      set.has("given")
+    ) {
+      return "firstname";
+    }
+    if (
+      set.has("lastname") ||
+      set.has("lname") ||
+      set.has("surname") ||
+      set.has("familyname") ||
+      set.has("family")
+    ) {
+      return "lastname";
+    }
+    if (set.has("middlename") || set.has("mname") || set.has("middle")) {
+      return "middlename";
+    }
+    return null;
+  }
+
   function fieldTokens(element) {
     const tokens = [
       element.name,
@@ -51,15 +104,28 @@
       element.getAttribute("autocomplete"),
     ];
 
-    return tokens
+    const normalized = tokens
       .filter(Boolean)
       .flatMap((token) => String(token).split(/[\s_\-./[\]]+/))
       .map(normalizeKey)
       .filter(Boolean);
+
+    return expandNamePartTokens(normalized);
   }
 
   function lookupDefault(tokens, defaultsMap) {
-    for (const token of tokens) {
+    // Prefer first/last/middle over bare "name" when the field is a name part.
+    const namePartKey = detectNamePartKey(tokens);
+    if (namePartKey && defaultsMap[namePartKey] !== undefined) {
+      return defaultsMap[namePartKey];
+    }
+
+    // Longer exact matches first so "firstname" wins over "name".
+    const exactTokens = [...new Set(tokens)].sort((a, b) => b.length - a.length);
+    for (const token of exactTokens) {
+      if (namePartKey && token === "name") {
+        continue;
+      }
       if (defaultsMap[token] !== undefined) {
         return defaultsMap[token];
       }
@@ -67,7 +133,24 @@
 
     for (const [key, value] of Object.entries(defaultsMap)) {
       const normalizedKey = normalizeKey(key);
-      if (tokens.some((token) => token === normalizedKey || token.includes(normalizedKey) || normalizedKey.includes(token))) {
+      if (namePartKey && normalizedKey === "name") {
+        continue;
+      }
+      // Exact always; substring only for longer keys so "name" does not hit
+      // "username" / "filename" and invent Jane Doe on unrelated fields.
+      if (
+        tokens.some((token) => {
+          if (token === normalizedKey) {
+            return true;
+          }
+          if (token.length < 5 || normalizedKey.length < 5) {
+            return false;
+          }
+          return (
+            token.includes(normalizedKey) || normalizedKey.includes(token)
+          );
+        })
+      ) {
         return value;
       }
     }
@@ -203,34 +286,35 @@
     if (joined.includes("timezone") || joined.includes("time zone")) {
       return "America/New_York";
     }
-    if (joined.includes("subject")) {
-      return "Test inquiry";
-    }
-    if (joined.includes("message") || joined.includes("comment") || joined.includes("reason") || joined.includes("inquiry")) {
-      return "This is test content for form development.";
-    }
+    // Free-text / essay fields (subject, message, question, …): leave blank
+    // unless the active profile supplies an explicit answer.
     if (type === "checkbox") {
       return element.required ? "true" : "false";
     }
     if (element.tagName === "SELECT") {
       const option = Array.from(element.options).find((entry) => entry.value);
-      return option ? option.value : "";
-    }
-    if (element.tagName === "TEXTAREA") {
-      return "This is test content for form development.";
+      return option ? option.value : undefined;
     }
     if (type === "password") {
       return "TestPassword123!";
     }
 
-    return "Test value";
+    // Unknown field — leave blank rather than inventing placeholder prose.
+    return undefined;
   }
 
   function buildDefaultsMap(defaults, presetFields, mode) {
     const normalized = {};
 
+    // First-wins: DEFAULT_FIELD_VALUES includes aliases (firstName + first_name)
+    // that normalize to the same key. After merging profile overrides onto
+    // camelCase keys only, later aliases would otherwise clobber Oscar → Jane.
     for (const [key, value] of Object.entries(defaults || {})) {
-      normalized[normalizeKey(key)] = applyTimestampTokens(String(value));
+      const normalizedKey = normalizeKey(key);
+      if (normalized[normalizedKey] !== undefined) {
+        continue;
+      }
+      normalized[normalizedKey] = applyTimestampTokens(String(value));
     }
 
     if (mode !== "generic" && presetFields) {
@@ -297,11 +381,13 @@
       return fromDefaults;
     }
 
+    // Auto: only fill fields we have a known profile/default for.
+    // Generic: invent values for recognized field types; still skip unknowns.
     if (mode === "generic") {
       return inferGenericValue(field.element, field.tokens);
     }
 
-    return inferGenericValue(field.element, field.tokens);
+    return undefined;
   }
 
   function setNativeValue(element, value) {
@@ -426,6 +512,9 @@
           filledFields.push({
             name: field.name,
             id: field.id,
+            tag: field.tag,
+            type: field.type,
+            label: field.label,
             value,
           });
         }
@@ -437,6 +526,9 @@
       filledFields.push({
         name: field.name,
         id: field.id,
+        tag: field.tag,
+        type: field.type,
+        label: field.label,
         value,
       });
     }

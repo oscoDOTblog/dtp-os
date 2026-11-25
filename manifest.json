@@ -1,7 +1,7 @@
 {
   "name": "dtp-os",
   "description": "dtp-os \u2014 new tab home and browser tools",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "manifest_version": 3,
   "icons": {
     "48": "assets/48.png",
@@ -11,7 +11,13 @@
     "tabs",
     "storage",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "contextMenus",
+    "clipboardWrite",
+    "alarms"
+  ],
+  "optional_permissions": [
+    "cookies"
   ],
   "host_permissions": [
     "http://*/*",

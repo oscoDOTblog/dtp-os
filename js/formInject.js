@@ -3,6 +3,8 @@ import {
   getCustomDefaultsJson,
   getFillMode,
   getMergedDefaults,
+  listFormInjectProfiles,
+  setActiveProfileId,
 } from "./lib/formInjectSettings.js";
 import { matchFormInjectPreset } from "./lib/formInjectPresets.js";
 import { runFormInjectOnActiveTab } from "./lib/formInjectClient.js";
@@ -14,7 +16,21 @@ export function mountFormInjectTool(container, { showToast }) {
   const desc = document.createElement("p");
   desc.className = "tool-form-desc";
   desc.textContent =
-    "Fill form fields on the active tab with mock data. Configure defaults in Settings. Does not submit.";
+    "Fill known form fields on the active tab from your mock profile. Unknown fields are left blank. Configure profiles in Settings. Does not submit.";
+
+  const profileRow = document.createElement("div");
+  profileRow.className = "form-inject-popup-profile-row";
+
+  const profileLabel = document.createElement("label");
+  profileLabel.className = "tool-label";
+  profileLabel.htmlFor = "formInjectActiveProfile";
+  profileLabel.textContent = "Profile";
+
+  const profileSelect = document.createElement("select");
+  profileSelect.id = "formInjectActiveProfile";
+  profileSelect.className = "field-input form-inject-profile-select";
+
+  profileRow.append(profileLabel, profileSelect);
 
   const actionRow = document.createElement("div");
   actionRow.className = "tool-actions-row";
@@ -48,8 +64,10 @@ export function mountFormInjectTool(container, { showToast }) {
   errorEl.className = "tool-error";
   errorEl.hidden = true;
 
-  panel.append(desc, actionRow, previewWrap, errorEl);
+  panel.append(desc, profileRow, actionRow, previewWrap, errorEl);
   container.appendChild(panel);
+
+  let profilesList = { activeProfileId: "", profiles: [] };
 
   function setError(message) {
     if (!message) {
@@ -61,8 +79,28 @@ export function mountFormInjectTool(container, { showToast }) {
     errorEl.textContent = message;
   }
 
-  function formatPreview(result, presetLabel) {
+  function renderProfileSelect() {
+    profileSelect.replaceChildren();
+    for (const profile of profilesList.profiles) {
+      const option = document.createElement("option");
+      option.value = profile.id;
+      option.textContent = profile.name;
+      profileSelect.appendChild(option);
+    }
+    profileSelect.value = profilesList.activeProfileId;
+    profileSelect.disabled = profilesList.profiles.length === 0;
+  }
+
+  async function loadProfiles() {
+    profilesList = await listFormInjectProfiles();
+    renderProfileSelect();
+  }
+
+  function formatPreview(result, presetLabel, profileName) {
     const lines = [];
+    if (profileName) {
+      lines.push(`Profile: ${profileName}`);
+    }
     if (presetLabel) {
       lines.push(`Preset: ${presetLabel}`);
     }
@@ -110,17 +148,44 @@ export function mountFormInjectTool(container, { showToast }) {
       scanOnly,
     });
 
-    return { result, preset, fillMode };
+    const activeProfile = profilesList.profiles.find(
+      (profile) => profile.id === profilesList.activeProfileId
+    );
+
+    return { result, preset, fillMode, profileName: activeProfile?.name };
+  }
+
+  async function handleProfileChange() {
+    const nextId = profileSelect.value;
+    if (!nextId || nextId === profilesList.activeProfileId) {
+      return;
+    }
+
+    try {
+      setError("");
+      await setActiveProfileId(nextId);
+      profilesList = await listFormInjectProfiles();
+      renderProfileSelect();
+      const active = profilesList.profiles.find(
+        (profile) => profile.id === profilesList.activeProfileId
+      );
+      showToast(`Active profile: ${active?.name || "profile"}`);
+    } catch (err) {
+      profileSelect.value = profilesList.activeProfileId;
+      setError(err.message || "Could not switch profile.");
+      showToast(err.message || "Could not switch profile.", true);
+    }
   }
 
   async function handleScan() {
     setError("");
     scanBtn.disabled = true;
     fillBtn.disabled = true;
+    profileSelect.disabled = true;
 
     try {
-      const { result, preset } = await buildPayload(true);
-      preview.textContent = formatPreview(result, preset?.label);
+      const { result, preset, profileName } = await buildPayload(true);
+      preview.textContent = formatPreview(result, preset?.label, profileName);
       previewWrap.hidden = false;
       showToast(`Found ${result.fieldCount} field${result.fieldCount === 1 ? "" : "s"}`);
     } catch (err) {
@@ -129,6 +194,7 @@ export function mountFormInjectTool(container, { showToast }) {
     } finally {
       scanBtn.disabled = false;
       fillBtn.disabled = false;
+      profileSelect.disabled = profilesList.profiles.length === 0;
     }
   }
 
@@ -136,17 +202,23 @@ export function mountFormInjectTool(container, { showToast }) {
     setError("");
     scanBtn.disabled = true;
     fillBtn.disabled = true;
+    profileSelect.disabled = true;
 
     try {
-      const { result, preset, fillMode } = await buildPayload(false);
-      preview.textContent = formatPreview(result, preset?.label);
+      const { result, preset, fillMode, profileName } = await buildPayload(false);
+      preview.textContent = formatPreview(result, preset?.label, profileName);
       previewWrap.hidden = false;
 
-      const suffix = preset
-        ? ` (${preset.label})`
-        : fillMode === "generic"
-          ? " (generic)"
-          : "";
+      const parts = [];
+      if (profileName) {
+        parts.push(profileName);
+      }
+      if (preset) {
+        parts.push(preset.label);
+      } else if (fillMode === "generic") {
+        parts.push("generic");
+      }
+      const suffix = parts.length ? ` (${parts.join(" · ")})` : "";
       showToast(
         `Filled ${result.filledCount} field${result.filledCount === 1 ? "" : "s"}${suffix}`
       );
@@ -156,14 +228,21 @@ export function mountFormInjectTool(container, { showToast }) {
     } finally {
       scanBtn.disabled = false;
       fillBtn.disabled = false;
+      profileSelect.disabled = profilesList.profiles.length === 0;
     }
   }
 
   scanBtn.addEventListener("click", handleScan);
   fillBtn.addEventListener("click", handleFill);
+  profileSelect.addEventListener("change", handleProfileChange);
+
+  loadProfiles().catch((err) => {
+    setError(err.message || "Could not load profiles.");
+  });
 
   return () => {
     scanBtn.removeEventListener("click", handleScan);
     fillBtn.removeEventListener("click", handleFill);
+    profileSelect.removeEventListener("change", handleProfileChange);
   };
 }

@@ -1,0 +1,18 @@
+# dtp-os — Cursor rules
+
+## Stack
+- Chrome MV3 extension (vanilla JS modules, no React build step)
+- Style with CSS in `css/` (popup.css, newtab.css, tokens.css) — do not use Tailwind or TypeScript
+- Develop new features with code that is as modular and scalable as possible
+- Do not implement features that will leak any sensitive app information or credentials
+- If creating AI prompts, keep them server-side / out of client-injected page scripts unless they are local mock helpers
+- Persist settings in `chrome.storage.local`; use camelCase for stored field names
+
+## Design
+- Netflix-style dark theming with hot pink accents (`#ff1493` / `#ff69b4`) via `css/tokens.css`
+- Prefer CSS custom properties from tokens over hard-coded hex in new UI
+- Keep popup dense and readable (≈360×480); new tab can breathe more
+
+## Cursor skills
+- Use `.cursor/skills/coss` and `.cursor/skills/coss-particles` for **interaction patterns, a11y, and control composition** (selects, fields, dialogs, buttons). Translate those patterns into vanilla DOM + CSS — do not invent React/Tailwind APIs in this repo unless a React migration is explicitly requested.
+- Use `.cursor/skills/frontend-design` for distinctive visual choices within the established dark + hot pink system

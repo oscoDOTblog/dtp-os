@@ -4,21 +4,37 @@
   box-sizing: border-box;
 }
 
+html {
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  margin: 0;
+  overflow-x: hidden;
+  background-color: var(--bg);
+}
+
 body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   width: 360px;
+  min-width: 360px;
+  max-width: 360px;
   max-height: 480px;
-  background-color: #0c0c0c;
-  color: #f5f5f5;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
   overflow: hidden;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
 }
 
 .view {
   display: flex;
   flex-direction: column;
+  width: 100%;
   max-height: 480px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .view[hidden] {
@@ -27,20 +43,22 @@ body {
 
 .popup-header {
   padding: 0.875rem 1rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 105, 180, 0.25);
+  border-bottom: 1px solid var(--hot-pink-border);
 }
 
 .popup-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #ff69b4;
+  color: var(--accent);
 }
 
 .tool-list {
   margin: 0;
   padding: 0.5rem;
   list-style: none;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .tool-list-item {
@@ -672,6 +690,79 @@ body {
   margin: 0.25rem 0 0.5rem;
 }
 
+.form-inject-profile-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0.65rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--hot-pink-border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, var(--hot-pink-soft), transparent 70%),
+    var(--bg-elevated);
+}
+
+.form-inject-profile-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.form-inject-profile-select {
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+    linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.75rem;
+}
+
+.form-inject-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.form-inject-profile-actions .coss-btn:disabled {
+  opacity: 0.64;
+  cursor: not-allowed;
+}
+
+.form-inject-active-hint {
+  margin: 0;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--primary);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+
+.form-inject-popup-profile-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  padding: 0.6rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-muted);
+}
+
+.form-inject-popup-profile-row .tool-label {
+  margin-bottom: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+
 .branding-enable-row {
   display: flex;
   align-items: center;
@@ -808,17 +899,17 @@ body {
   margin: 0.5rem 0 0.35rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: rgba(245, 245, 245, 0.65);
+  color: var(--fg-muted);
 }
 
 .field-input,
 .field-textarea {
   width: 100%;
   padding: 0.5rem 0.625rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 0.375rem;
-  background: rgba(255, 255, 255, 0.05);
-  color: #f5f5f5;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  color: var(--fg);
   font-size: 0.8rem;
   font-family: inherit;
 }
@@ -826,22 +917,25 @@ body {
 .field-textarea {
   resize: vertical;
   min-height: 5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .field-input:focus,
 .field-textarea:focus {
-  border-color: #ff69b4;
+  border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
+  box-shadow: var(--shadow-focus);
 }
 
 .field-save-btn {
   margin-top: 0.75rem;
   padding: 0.5rem 0.875rem;
-  border: 1px solid rgba(255, 105, 180, 0.5);
-  border-radius: 0.375rem;
-  background: rgba(255, 105, 180, 0.15);
-  color: #ff69b4;
+  border: 1px solid var(--hot-pink-border);
+  border-radius: var(--radius-sm);
+  background: var(--hot-pink-soft);
+  color: var(--accent);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -849,7 +943,7 @@ body {
 
 .field-save-btn:hover,
 .field-save-btn:focus-visible {
-  background: rgba(255, 105, 180, 0.28);
+  background: rgba(255, 20, 147, 0.28);
   outline: none;
 }
 
@@ -980,4 +1074,205 @@ body {
   margin-top: 0.5rem;
   font-size: 0.68rem;
   color: rgba(245, 245, 245, 0.45);
+}
+
+/* Copy Section */
+.copy-section-status {
+  margin: 0;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--primary);
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+}
+
+.copy-section-status[hidden] {
+  display: none;
+}
+
+.copy-section-preview {
+  max-height: 11rem;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: rgba(245, 245, 245, 0.8);
+}
+
+.copy-section-preview[hidden] {
+  display: none;
+}
+
+/* Apply Copilot CDP setup */
+.apply-copilot-panel .apply-copilot-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.apply-copilot-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.apply-copilot-badge-ready {
+  color: #0a0a0a;
+  background: #7CFC00;
+}
+
+.apply-copilot-badge-down {
+  color: #fff;
+  background: #b91c1c;
+}
+
+.apply-copilot-badge-unknown {
+  color: rgba(245, 245, 245, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.apply-copilot-status-detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: rgba(245, 245, 245, 0.65);
+  word-break: break-all;
+}
+
+.apply-copilot-steps {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(245, 245, 245, 0.85);
+}
+
+.apply-copilot-steps code {
+  font-size: 0.72rem;
+  color: #ff69b4;
+}
+
+.apply-copilot-warn {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(255, 180, 100, 0.95);
+}
+
+.apply-copilot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+/* VideoDL Cookies — local YouTube cookie push */
+.videodl-cookies-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.55rem 0.6rem 0.6rem;
+  border: 1px solid rgba(255, 105, 180, 0.28);
+  border-radius: 0.375rem;
+  background:
+    linear-gradient(180deg, rgba(255, 20, 147, 0.08), rgba(10, 10, 10, 0.35));
+}
+
+.videodl-cookies-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.videodl-cookies-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.videodl-cookies-badge-ready {
+  color: #0a0a0a;
+  background: #ff69b4;
+}
+
+.videodl-cookies-badge-down {
+  color: #fff;
+  background: #b91c1c;
+}
+
+.videodl-cookies-badge-unknown {
+  color: rgba(245, 245, 245, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.videodl-cookies-status-detail {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: rgba(245, 245, 245, 0.65);
+  word-break: break-word;
+}
+
+.videodl-cookies-ledger {
+  display: grid;
+  gap: 0.2rem 0.75rem;
+  margin: 0.15rem 0 0;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.videodl-cookies-ledger > div {
+  display: grid;
+  grid-template-columns: 5.25rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.videodl-cookies-ledger dt {
+  margin: 0;
+  color: #ff69b4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.videodl-cookies-ledger dd {
+  margin: 0;
+  color: rgba(245, 245, 245, 0.88);
+  word-break: break-word;
+}
+
+.videodl-cookies-warn,
+.videodl-cookies-error {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.videodl-cookies-warn {
+  color: rgba(255, 180, 100, 0.95);
+}
+
+.videodl-cookies-error {
+  color: #ff8a8a;
+}
+
+.videodl-cookies-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
 }

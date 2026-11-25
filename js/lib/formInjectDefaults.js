@@ -182,23 +182,14 @@ export const DEFAULT_FIELD_VALUES = {
   timezone: "America/New_York",
 
   // —— Inquiry / message ——
-  subject: "Test inquiry",
-  message: "This is test content for form development.",
-  comments: "This is test content for form development.",
-  comment: "This is test content for form development.",
-  reason: "Looking for general information.",
-  description: "This is test content for form development.",
-  notes: "Test notes for form development.",
-  inquiry: "General inquiry for testing purposes.",
-  question: "This is a test question.",
-  howCanWeHelp: "I would like more information about your services.",
+  // Free-text / essay keys are intentionally omitted from built-ins so unknown
+  // questions stay blank unless the active profile supplies an answer.
   howDidYouHear: "Web search",
   how_did_you_hear: "Web search",
   hearAboutUs: "Web search",
   hear_about_us: "Web search",
   referralSource: "Web search",
   referral_source: "Web search",
-  source: "Web search",
 
   // —— Service-specific (Wendy intake) ——
   serviceSeeking: "Counseling",
@@ -340,6 +331,7 @@ export const DEFAULT_FIELD_GROUPS = [
       "message",
       "reason",
       "comments",
+      "question",
       "howDidYouHear",
       "referralSource",
       "howCanWeHelp",
@@ -352,6 +344,35 @@ export function applyTimestampTokens(value) {
     return value;
   }
   return value.replace(/\{timestamp\}/g, String(Date.now()));
+}
+
+/** Strip separators so firstName / first_name / first-name share a lookup key. */
+export function normalizeFieldKey(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toLowerCase();
+}
+
+/**
+ * Merge profile overrides onto built-in defaults, and copy each override onto
+ * every built-in alias that normalizes to the same key (firstName → first_name).
+ */
+export function mergeFieldDefaults(customOverrides = {}) {
+  const merged = { ...DEFAULT_FIELD_VALUES };
+  const defaultKeys = Object.keys(DEFAULT_FIELD_VALUES);
+
+  for (const [key, value] of Object.entries(customOverrides || {})) {
+    const normalizedOverride = normalizeFieldKey(key);
+    merged[key] = value;
+    for (const defaultKey of defaultKeys) {
+      if (normalizeFieldKey(defaultKey) === normalizedOverride) {
+        merged[defaultKey] = value;
+      }
+    }
+  }
+
+  return merged;
 }
 
 export function serializeDefaultsForEditor(defaults) {
