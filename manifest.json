@@ -15,7 +15,8 @@
     "contextMenus",
     "clipboardWrite",
     "alarms",
-    "downloads"
+    "downloads",
+    "offscreen"
   ],
   "optional_permissions": [
     "cookies"

@@ -4,6 +4,7 @@ import { syncEmojiAutocompleteRegistration } from "./js/lib/emojiAutocompleteReg
 import { getEmojiAutocompleteEnabled } from "./js/lib/emojiAutocompleteSettings.js";
 import { syncBandcampStreamerRegistration } from "./js/lib/bandcampStreamerRegistration.js";
 import { getBandcampStreamerEnabled } from "./js/lib/bandcampStreamerSettings.js";
+import { downloadBandcampTrack } from "./js/lib/bandcampDownload.js";
 import {
   COPY_SECTION_CSS_FILE,
   COPY_SECTION_ENGINE_FILE,
@@ -156,7 +157,15 @@ chrome.contextMenus?.onClicked?.addListener((info, tab) => {
   });
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "dtp-bandcamp-download") {
+    downloadBandcampTrack(message, sender).then(
+      () => sendResponse({ ok: true }),
+      (err) => sendResponse({ ok: false, error: err.message })
+    );
+    return true;
+  }
+
   if (message?.type === "dtp-ping") {
     sendResponse({ ok: true });
     return;

@@ -9,9 +9,8 @@
  * `.time_elapsed` / `.time_total` spans. No second audio pipeline, so the
  * native controls and the bar can never play over each other.
  *
- * Current track comes from the tab title (`▶︎ Track | …`), which Bandcamp
- * keeps current on both album and single-track pages (the inline title
- * span starts out empty on singles). Shuffle jumps through row play links
+ * Track metadata comes from the release embed. On albums, the tab title
+ * identifies the current track. Shuffle jumps through row play links
  * in a shuffled order with a pause-then-jump preempt so the native player
  * doesn't auto-advance down the page order first; repeat-one seeks back to
  * zero just before the end; repeat-all restarts the release when playback
@@ -50,7 +49,7 @@ function shuffleArray(a) {
 // Bandcamp keeps the tab title current (`▶︎ Track | …`) on both album and
 // single-track pages, where the inline title span may still be empty.
 function tabTrackTitle() {
-  const t = (window.document.title || "").replace(/^▶︎?\s*/, "");
+  const t = document.title.replace(/^▶[\uFE0E\uFE0F]?\s*/, "");
   const pipe = t.indexOf(" | ");
   return ((pipe === -1 ? t : t.slice(0, pipe)) || "").trim();
 }
@@ -62,8 +61,18 @@ function fallbackTitle() {
   return (el && el.textContent.trim()) || "";
 }
 
-function currentTitle() {
-  return tabTrackTitle() || fallbackTitle();
+function readReleaseData() {
+  try {
+    return JSON.parse(document.querySelector("[data-tralbum]")?.getAttribute("data-tralbum")) || {};
+  } catch {
+    return {};
+  }
+}
+
+function stripArtistSuffix(title, artist) {
+  if (!artist) return title;
+  const suffix = [` by ${artist}`, ` - ${artist}`].find((s) => title.endsWith(s));
+  return suffix ? title.slice(0, -suffix.length) : title;
 }
 
 function elapsedSecs() {
@@ -93,17 +102,37 @@ function pageTracks() {
   );
 }
 
-const pageArt =
-  document.querySelector("#tralbumArt img")?.currentSrc ||
-  document.querySelector("#tralbumArt img")?.src ||
-  "";
-const pageArtist =
-  document.querySelector("#band-name-location .title")?.textContent.trim() ||
-  "";
-
 export function initReleasePage(albumplayer) {
   if (document.getElementById(PLAYER_BAR_ID)) return true;
   if (!document.querySelector(".playbutton")) return false;
+
+  const release = readReleaseData();
+  const tracks = release.trackinfo || [];
+  const pageArt = document.querySelector("#tralbumArt img");
+  const art = pageArt?.currentSrc || pageArt?.src || "";
+  const pageArtist = document.querySelector("#band-name-location .title")?.textContent.trim() || "";
+  const artist = release.artist || pageArtist;
+  const singleTrack = release.current?.type === "track" &&
+    tracks.find((track) => track.track_id === release.current.id);
+
+  function cleanTabTitle(title) {
+    return stripArtistSuffix(stripArtistSuffix(title, artist), pageArtist);
+  }
+
+  function currentTrack() {
+    if (singleTrack) return singleTrack;
+    const tabTitle = tabTrackTitle();
+    const candidates = [tabTitle, cleanTabTitle(tabTitle), fallbackTitle()];
+    for (const title of candidates) {
+      const track = tracks.find((entry) => entry.title === title);
+      if (track) return track;
+    }
+    return null;
+  }
+
+  function currentTitle() {
+    return currentTrack()?.title || cleanTabTitle(tabTrackTitle() || fallbackTitle());
+  }
 
   let rShuffle = false;
   let rRepeat = "off"; // off | all | one
@@ -136,49 +165,6 @@ export function initReleasePage(albumplayer) {
     const id = Number(artId);
     if (!Number.isFinite(id) || id <= 0) return "";
     return `https://f4.bcbits.com/img/a${String(id).padStart(10, "0")}_10.jpg`;
-  }
-
-  // Stream URL + tag metadata for the currently shown track,
-  // from the page's own embed.
-  function currentTrackInfo() {
-    const title = currentTitle();
-    if (!title) return null;
-    try {
-      const el = document.querySelector("[data-tralbum]");
-      if (!el) return null;
-      const data = JSON.parse(el.getAttribute("data-tralbum"));
-      const list = data.trackinfo || [];
-      const idx = list.findIndex((t) => t.title === title);
-      if (idx === -1) return null;
-      const t = list[idx];
-      const file = t.file || {};
-      const url =
-        file["mp3-128"] ||
-        Object.values(file).find(
-          (v) => typeof v === "string" && v.startsWith("http")
-        ) ||
-        "";
-      if (!url) return null;
-      const cur = data.current || {};
-      let album = "";
-      if (typeof cur.title === "string" && cur.title) {
-        const suffix = ` by ${pageArtist}`;
-        album =
-          pageArtist && cur.title.endsWith(suffix)
-            ? cur.title.slice(0, -suffix.length)
-            : cur.title;
-      }
-      return {
-        url,
-        num: t.track_num || idx + 1,
-        total: list.length,
-        album,
-        year: yearFrom(data.album_release_date || cur.release_date),
-        art: fullArtUrl(data.art_id || cur.art_id) || pageArt,
-      };
-    } catch (e) {
-      return null;
-    }
   }
 
   function manualStep(dir) {
@@ -248,24 +234,32 @@ export function initReleasePage(albumplayer) {
     onShuffle: () => setReleaseShuffle(!rShuffle),
     onRepeat: () => setReleaseRepeatCycle(),
     onDownload: () => {
-      const info = currentTrackInfo();
-      if (!info) return;
-      const title = currentTitle();
+      const track = currentTrack();
+      const file = track?.file || {};
+      const url = file["mp3-128"] || Object.values(file).find(
+        (value) => typeof value === "string" && value.startsWith("https://")
+      );
+      if (!url) {
+        console.warn("Bandcamp download unavailable for the current track");
+        return;
+      }
+      const title = track.title || "track";
+      const current = release.current || {};
       window.postMessage(
         {
           type: "dtp-bandcamp-download",
-          url: info.url,
+          url,
           filename: sanitizeFilename(
-            `${pageArtist ? pageArtist + " - " : ""}${title || "track"}.mp3`
+            `${artist ? artist + " - " : ""}${title}.mp3`
           ),
           tags: {
-            title: title || "",
-            artist: pageArtist || "",
-            album: info.album || "",
-            year: info.year || "",
-            art: info.art || "",
-            num: info.num || 0,
-            total: info.total || 0,
+            title,
+            artist,
+            album: release.album_title || cleanTabTitle(current.title || ""),
+            year: yearFrom(release.album_release_date || current.release_date),
+            art: fullArtUrl(release.art_id || current.art_id) || art,
+            num: track.track_num || tracks.indexOf(track) + 1,
+            total: tracks.length,
           },
         },
         "*"
@@ -283,7 +277,7 @@ export function initReleasePage(albumplayer) {
     // Before first play the tab title holds the release (not track) name,
     // so only show a track once playback has measurably started.
     const show = title !== "" && (playing || elapsed > 0 || total > 0);
-    bar.setTrack(show ? { title, artist: pageArtist, art: pageArt } : null);
+    bar.setTrack(show ? { title, artist, art } : null);
     bar.setPosition(elapsed);
     if (total > 0) bar.setDuration(total);
     bar.setPlaying(playing);
@@ -316,9 +310,11 @@ export function initReleasePage(albumplayer) {
         try {
           albumplayer.seek(0);
         } catch (e) {}
-        // Repeat-all while shuffling: pause just before the native player
-        // would advance down page order, then jump the shuffled next track.
-      } else if (
+        return;
+      }
+      // Shuffle preempt: pause before the native player would advance down
+      // page order, then jump the shuffled next track.
+      if (
         rShuffle &&
         playing &&
         total > 0 &&
