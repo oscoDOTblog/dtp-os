@@ -9,6 +9,7 @@ import {
 import { createFormInjectSettingsPanel } from "./formInjectSettingsPanel.js";
 import { createEmojiAutocompleteSettingsPanel } from "./emojiAutocompleteSettingsPanel.js";
 import { createCopySectionSettingsPanel } from "./copySectionSettingsPanel.js";
+import { createBandcampStreamerSettingsPanel } from "./bandcampStreamerSettingsPanel.js";
 
 const GREETINGS_HELP_ID = "custom-greetings-help";
 
@@ -294,11 +295,21 @@ export function mountSettingsTool(container, { showToast }) {
     },
   });
 
+  const bandcampStreamerPanel = createBandcampStreamerSettingsPanel({
+    ids: {
+      enabled: "settingsBandcampStreamerEnabled",
+    },
+    setStatus: (message, isError = false) => {
+      showToast(message, isError);
+    },
+  });
+
   stack.append(
     brandingPanel,
     formInjectPanel,
     emojiAutocompletePanel,
-    copySectionPanel
+    copySectionPanel,
+    bandcampStreamerPanel
   );
   container.appendChild(stack);
 
@@ -307,6 +318,7 @@ export function mountSettingsTool(container, { showToast }) {
     formInjectPanel.cleanup?.();
     emojiAutocompletePanel.cleanup?.();
     copySectionPanel.cleanup?.();
+    bandcampStreamerPanel.cleanup?.();
   };
 }
 

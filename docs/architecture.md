@@ -78,6 +78,8 @@ dtp-os/
 │   │   ├── formInjectPresets.js      # Site-specific presets (e.g. Wendy intake)
 │   │   ├── formInjectClient.js       # activeTab + scripting bridge for Form Inject
 │   │   ├── twitchAdBlockSettings.js  # Twitch Ad Block enable flag (chrome.storage.local)
+│   │   ├── bandcampStreamerSettings.js # Bandcamp Streamer enable flag + hotkey prefs (chrome.storage.local)
+│   │   ├── bandcampStreamerRegistration.js # Dynamic ISOLATED-world loader registration
 │   │   ├── twitchAdBlockMeta.js      # Vendored vaft version + last-updated date
 │   │   ├── twitchAdBlockRegistration.js # Dynamic MAIN-world content script registration
 │   │   ├── twitchAdBlockUpdateClient.js # On-demand GitHub release check
@@ -97,11 +99,15 @@ dtp-os/
 │   ├── inject/
 │   │   ├── formInjectEngine.global.js # In-page scan/fill engine (injected via scripting)
 │   │   ├── twitchAdBlockEngine.global.js # Vendored vaft engine (Twitch ad blocking)
+│   │   ├── bandcampLoader.global.js # ISOLATED loader: reads prefs, injects MAIN-world bandcamp/init.js
+│   │   ├── bandcamp/               # Vendored bandcamp-streamer page-world modules + CSS (incl. dtp-os-only modules/artist.js)
 │   │   ├── emojiAutocompleteEngine.global.js # In-page :query emoji autocomplete
 │   │   └── copySectionEngine.global.js # In-page region detection + Markdown serializer
 │   ├── formInject.js        # Form Inject popup tool
 │   ├── twitchAdBlock.js     # Twitch Ad Block popup tool
 │   ├── copySection.js       # Copy Section popup tool
+│   ├── bandcampStreamer.js     # Bandcamp Streamer popup tool (enable toggle + hotkey remap)
+│   ├── bandcampStreamerSettingsPanel.js # Bandcamp toggle for Settings (popup + new tab)
 │   ├── applyCopilotTool.js  # Apply Copilot CDP status + relaunch helper
 │   ├── videodlCookiesTool.js # Push YouTube cookies to local VideoDL
 │   ├── emojiAutocompleteSettingsPanel.js # Settings toggle UI for emoji autocomplete
@@ -169,7 +175,7 @@ To point the embed at a different home, change the iframe `src` in `tab_override
 
 Clicking the toolbar icon opens a compact popup separate from the new tab page.
 
-1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, VideoDL Cookies, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject, Twitch Ad Block, Copy Section, Apply Copilot (implemented); Colors (stub marked “Soon”).
+1. **Tool list** — Always shown when the popup opens. Emojis, YouTube Playlist, Video Downloader, VideoDL Cookies, Cloudflare Docker, Currency Converter, Points Conversion, Form Inject, Twitch Ad Block, Copy Section, Apply Copilot, Bandcamp Streamer (implemented); Colors (stub marked “Soon”).
 2. **Emojis picker** — Search bar and scrollable emoji grid with client-side filter. Clicking an emoji copies it to the clipboard, shows a brief toast, then closes the popup.
 3. **YouTube Playlist** — Paste channel page source, URL, or `UC...` ID; live-builds uploads playlist URL (`UC` → `UU`); copy and open in YouTube. Client-only (`js/lib/youtubeChannelPlaylist.js`).
 4. **Video Downloader** — Paste a social URL; polls sway-sls Lambda (`js/lib/videodlClient.js`), then fetches the signed file and triggers a browser download.
@@ -179,6 +185,7 @@ Clicking the toolbar icon opens a compact popup separate from the new tab page.
 8. **Emoji Autocomplete** (Settings) — On by default. When enabled, registers an ISOLATED-world `document_idle` content script on `http://*/*` and `https://*/*` that shows emoji suggestions while typing `:query` in native `input`/`textarea` fields. Toggle under **Settings** (popup or new tab). Refresh open tabs after toggling.
 9. **Copy Section** — Copies a page region to the clipboard as Markdown (default) or plain text. Buttons for **Copy main content** and **Copy whole page** act on the active tab and show a character count plus a preview. In the page itself, a floating copy button sits in a configurable corner and a right-click menu (**dtp-os → Copy this section / Copy main content / Copy whole page**) covers the rest. Format, the right-click toggle, the button toggle, and the button corner live under **Settings**.
 10. **VideoDL Cookies** — Reads YouTube/Google cookies from this Chrome profile (`chrome.cookies`, optional permission), converts them to Netscape format, and POSTs the file to local VideoDL at `http://127.0.0.1:8545/cookies/upload`. **Sync now** plus optional 6-hour auto-sync (`chrome.alarms`). Status shows reachability, last sync time, and cookie count — never cookie values. API URL must be loopback (`127.0.0.1` or `localhost`).
+11. **Bandcamp Streamer** — Ports [bandcamp-streamer](https://github.com/aflowofcode/bandcamp-streamer) (vendored page-world code under `js/inject/bandcamp/`, upstream credit retained). When `bandcampStreamerEnabled` is true, registers an ISOLATED-world `document_idle` loader on `*://*.bandcamp.com/*` that reads hotkey prefs from `chrome.storage.local` and injects the MAIN-world player module — MAIN-world injection is required because the player drives Bandcamp's own page globals (`playerview`, `collectionPlayer`, `BCEvents`). Covers feed autoplay, collection/wishlist continuous play with shuffle/reverse/bulk-load, release-page hotkeys, a **dtp-os-only** artist-page player (`modules/artist.js`) that lazily fetches each release's embedded `data-tralbum` JSON for stream URLs and drives a native `Audio` element, and a **dtp-os-only** release-page bar (`modules/release.js`, shared `modules/bar.js`) driving the native player. Both bars share one dtp-tunes-style component with cover art, seek, volume, queue panel, MP3 download (page-exposed stream URLs tagged with title/artist/album/year/track/cover via a hand-rolled ID3v2.3 writer in the ISOLATED loader, raw-bytes fallback), and (artist only) shuffle plus repeat off/all/one. Bandcamp's native collection player plus both bars are dark-themed after dtp-tunes with a light-mode toggle and selectable accent in the popup tool; hotkey remapping lives there too, and the enable toggle also appears under Settings. Hotkey remapping lives in the popup tool; the enable toggle also appears under Settings.
 
 Each tool exports a `mount*Tool(container, { showToast, hideToast })` function; `js/popup.js` routes by tool id and runs cleanup when navigating back.
 
@@ -237,6 +244,7 @@ This logic was added to support **Opera and other Chromium browsers** (see commi
 | `host_permissions` (`http://127.0.0.1/*`, `http://localhost/*`) | VideoDL Cookies and Apply Copilot: loopback fetches |
 | `host_permissions` (API Gateway + `*.amazonaws.com`) | Video Downloader: start/poll Lambda jobs and fetch signed S3 download URLs |
 | `host_permissions` (`*://*.twitch.tv/*`) | Twitch Ad Block: register MAIN-world content script when enabled |
+| `host_permissions` (`*://*.bandcamp.com/*`) | Bandcamp Streamer: register ISOLATED-world loader + inject MAIN-world player module and CSS when enabled |
 | `host_permissions` (`https://api.github.com/*`) | Twitch Ad Block: on-demand check for newer vaft releases |
 
 Form Inject uses `chrome.scripting.executeScript` with `js/inject/formInjectEngine.global.js` only when the user invokes Scan or Fill from the popup. It does not register persistent content scripts.

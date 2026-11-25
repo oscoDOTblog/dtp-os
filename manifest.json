@@ -14,7 +14,8 @@
     "activeTab",
     "contextMenus",
     "clipboardWrite",
-    "alarms"
+    "alarms",
+    "downloads"
   ],
   "optional_permissions": [
     "cookies"
@@ -28,7 +29,26 @@
     "https://*.amazonaws.com/*",
     "https://api.frankfurter.app/*",
     "*://*.twitch.tv/*",
-    "https://api.github.com/*"
+    "https://api.github.com/*",
+    "*://*.bandcamp.com/*",
+    "*://*.bcbits.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/inject/bandcamp/init.js",
+        "js/inject/bandcamp/modules/shared.js",
+        "js/inject/bandcamp/modules/player.js",
+        "js/inject/bandcamp/modules/overrides.js",
+        "js/inject/bandcamp/modules/feed.js",
+        "js/inject/bandcamp/modules/profile.js",
+        "js/inject/bandcamp/modules/artist.js",
+        "js/inject/bandcamp/modules/release.js",
+        "js/inject/bandcamp/modules/bar.js",
+        "js/inject/bandcamp/bandcamp-streamer.css"
+      ],
+      "matches": ["*://*.bandcamp.com/*"]
+    }
   ],
   "background": {
     "service_worker": "background.js",

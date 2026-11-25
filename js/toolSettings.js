@@ -12,4 +12,5 @@ export const TOOLS = {
   TWITCH_AD_BLOCK: "twitch-ad-block",
   APPLY_COPILOT: "apply-copilot",
   VIDEODL_COOKIES: "videodl-cookies",
+  BANDCAMP_STREAMER: "bandcamp-streamer",
 };

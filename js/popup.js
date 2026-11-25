@@ -10,6 +10,7 @@ import { mountFormInjectTool } from "./formInject.js";
 import { mountTwitchAdBlockTool } from "./twitchAdBlock.js";
 import { mountApplyCopilotTool } from "./applyCopilotTool.js";
 import { mountVideodlCookiesTool } from "./videodlCookiesTool.js";
+import { mountBandcampStreamerTool } from "./bandcampStreamer.js";
 import { TOOLS } from "./toolSettings.js";
 import { getToolIconPath } from "./toolIcons.js";
 import {
@@ -31,6 +32,7 @@ const TOOL_DEFINITIONS = [
   { id: TOOLS.TWITCH_AD_BLOCK, label: "Twitch Ad Block", implemented: true },
   { id: TOOLS.VIDEO_DOWNLOADER, label: "Video Downloader", implemented: true },
   { id: TOOLS.VIDEODL_COOKIES, label: "VideoDL Cookies", implemented: true },
+  { id: TOOLS.BANDCAMP_STREAMER, label: "Bandcamp Streamer", implemented: true },
   { id: TOOLS.YOUTUBE_PLAYLIST, label: "YouTube Playlist", implemented: true },
 ];
 
@@ -59,6 +61,7 @@ const TOOL_MOUNTERS = {
   [TOOLS.FORM_INJECT]: mountFormInjectTool,
   [TOOLS.TWITCH_AD_BLOCK]: mountTwitchAdBlockTool,
   [TOOLS.VIDEODL_COOKIES]: mountVideodlCookiesTool,
+  [TOOLS.BANDCAMP_STREAMER]: mountBandcampStreamerTool,
 };
 
 function showToast(message, isError = false) {

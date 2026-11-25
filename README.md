@@ -32,6 +32,7 @@ Click the extension icon for the tool launcher (favorites pin tools to the top):
 | **Form Inject** | Scan/fill form fields on the active tab with mock profiles & presets |
 | **Twitch Ad Block** | Optional in-stream/overlay blocking on `*.twitch.tv` (vendored [vaft](https://github.com/ryanbr/TwitchAdSolutions)); check for updates |
 | **VideoDL Cookies** | Push YouTube cookies from this Chrome profile to local VideoDL (`127.0.0.1:8545`); optional 6-hour auto-sync |
+| **Bandcamp Streamer** | Continuous streaming from Bandcamp feeds, collections, wishlists, and artist pages; remappable hotkeys |
 
 **Colors** is listed as coming soon.
 

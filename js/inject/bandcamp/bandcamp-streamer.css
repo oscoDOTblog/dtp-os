@@ -1,0 +1,572 @@
+/* used during full collection/wishlist load */
+html.loading {
+    cursor: progress;
+}
+
+/* search results hidden until click handlers set */
+html.search-results-hidden #collection-search-grid, 
+html.search-results-hidden #wishlist-search-grid {
+    display: none;
+}
+
+#player-controls-container {
+    height: 68px;
+    position: fixed;
+    width: 290px;
+    background:rgba(0, 0, 0, 0.8);
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: 0;
+    margin: 0;
+    border-radius: 0;
+    z-index: 101;
+}
+
+#seekers {
+    margin-top: 6px;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+}
+
+#seekers > * {
+    color: white;
+}
+
+#carousel-player #seekers {
+    margin-top: 26px;
+    width: 110px;
+    color: black;
+}
+
+#carousel-player #seekers > * {
+    color: black;
+}
+
+#seek-back, #seek-forward {
+    cursor: pointer;
+}
+
+#track_play_waypoint_controls {
+    margin-top: 6px;
+}
+#volume-container {
+    margin-top: -6px;
+}
+#volume-value, #position-container {
+    display: inline-block;
+    width: 80px;
+}
+
+#track_play_waypoints_controls_duration {
+    margin-right: 29px;
+}
+.player-controls {
+    color: #fcfcfc;
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    height: 24px;
+    padding-left: 10px;
+    box-sizing: border-box;
+    line-height: 24px;
+}
+
+.player-controls a {
+    margin: 0 .7em;
+    display: inline-block;
+}
+
+#sidebar .track_play_waypoint.stream-activated, #sidebar .track_play_waypoint.activated {
+    bottom: 68px !important;
+    opacity: 1 !important;
+}
+
+/* collection page */
+
+/* DOM items for which a playable track couldn't be found */
+.unplayable .track_play_auxiliary {
+    cursor: not-allowed;
+}
+.unplayable .track_play_auxiliary > .item_link_play {
+    display: none;
+}
+
+.carousel-player .queue ol {
+    height: calc(100% - 80px);
+}
+
+h2:has(#playlist-header) {
+    font-size: 17px;
+}
+
+#playlist-header {
+    font-weight: 600;
+}
+
+#shuffler, #reverser {
+    color:  blue;
+    cursor: pointer;
+    font-size: 0.7em; 
+}
+
+#reverser {
+    margin-left: 10px; 
+}
+
+.hidden {
+    display: none;
+}
+
+/* show more button */
+.expand-container.show-button {
+    display: flex !important;
+    justify-content: center;
+}
+
+.expand-container.show-button > .show-more {
+    margin: 0 1em;
+}
+
+/* dtp-os addition: shared dtp-tunes-style player bar (artist + release).
+   Dark by default; html[data-dtp-player-theme="light"] flips the vars below. */
+#dtp-player-bar {
+    --dtp-accent: #ff1493;
+    --bar-bg: #121214;
+    --bar-border: #232326;
+    --bar-fg: #f5f5f7;
+    --bar-muted: #a3a3ab;
+    --bar-faint: #6b6b73;
+    --bar-hover: #1f1f22;
+    --bar-track: #1f1f22;
+    --play-bg: #f5f5f7;
+    --play-fg: #0a0a0c;
+    --play-hover: #ffffff;
+    --thumb: #f5f5f7;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000001;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 80px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    background: var(--bar-bg) !important;
+    border-top: 1px solid var(--bar-border) !important;
+    color: var(--bar-fg) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+html[data-dtp-player-theme="light"] #dtp-player-bar {
+    --bar-bg: #ffffff;
+    --bar-border: #e3e0e3;
+    --bar-fg: #17161a;
+    --bar-muted: #55535c;
+    --bar-faint: #8b8892;
+    --bar-hover: #ece9ec;
+    --bar-track: #ece9ec;
+    --play-bg: #17161a;
+    --play-fg: #f7f5f7;
+    --play-hover: #2a2a2e;
+    --thumb: #17161a;
+}
+
+.dtp-a-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    flex: 0 1 24rem;
+    min-width: 10rem;
+}
+
+.dtp-a-cover {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bar-track);
+}
+
+.dtp-a-metatext {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    flex: 1;
+}
+
+#dtp-player-now {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bar-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#dtp-player-now.is-idle {
+    cursor: pointer;
+}
+
+#dtp-player-now.is-idle:hover {
+    color: var(--dtp-accent, #ff1493);
+}
+
+#dtp-player-artist {
+    font-size: 12px;
+    color: var(--bar-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#dtp-player-artist[hidden] {
+    display: none;
+}
+
+#dtp-player-status {
+    font-size: 12px;
+    color: var(--bar-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dtp-a-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dtp-a-transport {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dtp-a-btn {
+    width: 32px;
+    height: 32px;
+    border: none !important;
+    border-radius: 50%;
+    background: transparent !important;
+    color: var(--bar-fg) !important;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.dtp-a-btn:hover {
+    background: var(--bar-hover);
+}
+
+.dtp-a-btn.is-active {
+    color: var(--dtp-accent, #ff1493);
+}
+
+.dtp-a-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.dtp-a-play svg {
+    width: 20px;
+    height: 20px;
+}
+
+.dtp-a-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.dtp-a-play {
+    width: 40px;
+    height: 40px;
+    background: var(--play-bg) !important;
+    color: var(--play-fg) !important;
+    font-size: 16px;
+}
+
+.dtp-a-play:hover {
+    background: var(--play-hover) !important;
+}
+
+.dtp-a-seek {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 32rem;
+}
+
+.dtp-a-seek span {
+    font-size: 12px;
+    color: var(--bar-faint);
+    width: 40px;
+    flex-shrink: 0;
+}
+
+#dtp-player-cur {
+    text-align: right;
+}
+
+.dtp-a-seek input[type="range"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.dtp-a-vol {
+    display: none;
+    width: 10rem;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+@media (min-width: 768px) {
+    .dtp-a-vol {
+        display: flex;
+    }
+}
+
+@media (max-width: 640px) {
+    .dtp-a-seek {
+        display: none;
+    }
+    .dtp-a-meta {
+        width: auto;
+        flex: 1;
+    }
+}
+
+/* Range sliders: thin track with white fill up to --range-fill, 12px thumb. */
+#dtp-player-bar input[type="range"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    height: 4px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(
+        to right,
+        var(--dtp-accent, #ff1493) 0%,
+        var(--dtp-accent, #ff1493) var(--range-fill, 0%),
+        var(--bar-track, #1f1f22) var(--range-fill, 0%),
+        var(--bar-track, #1f1f22) 100%
+    );
+    outline: none;
+    cursor: pointer;
+}
+
+#dtp-player-bar input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--thumb, #f5f5f7);
+    cursor: pointer;
+}
+
+#dtp-player-bar input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: none;
+    border-radius: 50%;
+    background: var(--thumb, #f5f5f7);
+    cursor: pointer;
+}
+
+.dtp-a-vol input[type="range"] {
+    width: 5rem;
+}
+
+/* Queue panel: upcoming tracks, like the native player's queue. */
+.dtp-a-queue {
+    position: absolute;
+    right: 8px;
+    bottom: 88px;
+    width: min(380px, 92vw);
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--bar-bg);
+    border: 1px solid var(--bar-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.dtp-a-queue ol {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+}
+
+.dtp-a-queue-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.dtp-a-queue-row:hover {
+    background: var(--bar-hover);
+}
+
+.dtp-a-queue-row.is-active {
+    background: var(--bar-hover);
+}
+
+.dtp-a-queue-title {
+    font-size: 13px;
+    color: var(--bar-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dtp-a-queue-row.is-active .dtp-a-queue-title {
+    color: var(--dtp-accent, #ff1493);
+    font-weight: 600;
+}
+
+.dtp-a-queue-sub {
+    font-size: 11px;
+    color: var(--bar-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* dtp-os: dark theme for Bandcamp's native collection player, matching the
+   dtp-tunes BottomPlayer. The #collection-player prefix outranks Bandcamp's
+   class-only selectors, and Bandcamp uses no !important in these rules, so
+   none is needed here either. */
+#collection-player {
+    --dtp-accent: #ff1493;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player {
+    color: #a3a3ab;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player-inner {
+    background: #121214;
+    border-top: 1px solid #232326;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .now-playing .title,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress-transport .title {
+    color: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .now-playing .artist,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress-transport .pos-dur,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress-transport .featured-track,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .now-playing .dot {
+    color: #a3a3ab;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .now-playing img {
+    border-radius: 6px;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress-bar {
+    background: transparent;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress-bg,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .vol-bg {
+    background: #1f1f22;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .vol-amt {
+    background: var(--dtp-accent, #ff1493);
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .seek-control,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .vol-control {
+    background: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .playpause {
+    border-color: #232326;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .playpause .play {
+    border-left-color: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .playpause .pause {
+    border-left-color: #f5f5f7;
+    border-right-color: #f5f5f7;
+}
+
+/* Next/prev glyphs are a dark sprite; invert for the dark bar. */
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .transport .icon {
+    filter: invert(1);
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue-icon,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .vol-icon {
+    fill: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue-icon.active {
+    fill: var(--dtp-accent, #ff1493);
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue-header .close-icon {
+    fill: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue {
+    background: #181819;
+    border: 1px solid #232326;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue-header h2 {
+    color: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue li {
+    border-bottom-color: #232326;
+    color: #a3a3ab;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue li.active,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue li:hover,
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue li:focus {
+    background: #1f1f22;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue li.active .title {
+    color: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue-playpause .play {
+    border-left-color: #f5f5f7;
+}
+
+html[data-dtp-player-theme="dark"] #collection-player .carousel-player .queue-playpause .pause {
+    border-left-color: #f5f5f7;
+    border-right-color: #f5f5f7;
+}

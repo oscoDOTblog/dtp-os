@@ -2,6 +2,8 @@ import { syncTwitchAdBlockRegistration } from "./js/lib/twitchAdBlockRegistratio
 import { getTwitchAdBlockEnabled } from "./js/lib/twitchAdBlockSettings.js";
 import { syncEmojiAutocompleteRegistration } from "./js/lib/emojiAutocompleteRegistration.js";
 import { getEmojiAutocompleteEnabled } from "./js/lib/emojiAutocompleteSettings.js";
+import { syncBandcampStreamerRegistration } from "./js/lib/bandcampStreamerRegistration.js";
+import { getBandcampStreamerEnabled } from "./js/lib/bandcampStreamerSettings.js";
 import {
   COPY_SECTION_CSS_FILE,
   COPY_SECTION_ENGINE_FILE,
@@ -30,6 +32,11 @@ async function syncEmojiAutocompleteFromStorage() {
   await syncEmojiAutocompleteRegistration(enabled);
 }
 
+async function syncBandcampStreamerFromStorage() {
+  const enabled = await getBandcampStreamerEnabled();
+  await syncBandcampStreamerRegistration(enabled);
+}
+
 async function syncCopySectionFromStorage() {
   const enabled = await getCopySectionEnabled();
   await syncCopySectionRegistration(enabled);
@@ -40,6 +47,7 @@ async function syncAllContentScriptsFromStorage() {
     syncTwitchAdBlockFromStorage(),
     syncEmojiAutocompleteFromStorage(),
     syncCopySectionFromStorage(),
+    syncBandcampStreamerFromStorage(),
   ]);
 }
 
@@ -84,6 +92,13 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     const enabled = changes.copySectionEnabled.newValue !== false;
     syncCopySectionRegistration(enabled).catch((err) => {
       console.error("Copy Section storage sync failed:", err);
+    });
+  }
+
+  if (changes.bandcampStreamerEnabled) {
+    const enabled = changes.bandcampStreamerEnabled.newValue === true;
+    syncBandcampStreamerRegistration(enabled).catch((err) => {
+      console.error("Bandcamp Streamer storage sync failed:", err);
     });
   }
 
@@ -175,6 +190,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ? message.enabled
             : await getEmojiAutocompleteEnabled();
         await syncEmojiAutocompleteRegistration(enabled);
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err?.message || String(err),
+        });
+      }
+    })();
+
+    return true;
+  }
+
+  if (message?.type === "dtp-bandcamp-streamer-sync") {
+    (async () => {
+      try {
+        const enabled =
+          typeof message.enabled === "boolean"
+            ? message.enabled
+            : await getBandcampStreamerEnabled();
+        await syncBandcampStreamerRegistration(enabled);
         sendResponse({ ok: true });
       } catch (err) {
         sendResponse({

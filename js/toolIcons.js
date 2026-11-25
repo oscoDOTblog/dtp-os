@@ -13,6 +13,7 @@ export const TOOL_ICONS = {
   [TOOLS.TWITCH_AD_BLOCK]: "assets/tools/twitch-ad-block.svg",
   [TOOLS.APPLY_COPILOT]: "assets/tools/apply-copilot.svg",
   [TOOLS.VIDEODL_COOKIES]: "assets/tools/videodl-cookies.svg",
+  [TOOLS.BANDCAMP_STREAMER]: "assets/tools/default.svg",
   [TOOLS.COLORS]: "assets/tools/colors.svg",
 };
 
