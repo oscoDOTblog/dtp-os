@@ -167,6 +167,210 @@ export function initReleasePage(albumplayer) {
     return `https://f4.bcbits.com/img/a${String(id).padStart(10, "0")}_10.jpg`;
   }
 
+  function streamUrlOf(track) {
+    const file = track?.file || {};
+    return (
+      file["mp3-128"] ||
+      Object.values(file).find(
+        (value) => typeof value === "string" && value.startsWith("https://")
+      )
+    );
+  }
+
+  // Build the download message body for one track. `folder` nests it under
+  // "Artist - Album/NN - Title.mp3" (album batch only; single downloads
+  // keep landing as "Artist - Title.mp3").
+  function trackDownloadPayload(track, { folder = false } = {}) {
+    const url = streamUrlOf(track);
+    if (!url) return null;
+    const title = track.title || "track";
+    const current = release.current || {};
+    const album = release.album_title || cleanTabTitle(current.title || "");
+    const num = track.track_num || tracks.indexOf(track) + 1;
+    let filename;
+    if (folder && album) {
+      const dir = sanitizeFilename(artist ? `${artist} - ${album}` : album);
+      filename = `${dir}/${sanitizeFilename(
+        `${String(num).padStart(2, "0")} - ${title}`
+      )}.mp3`;
+    } else {
+      filename = sanitizeFilename(`${artist ? artist + " - " : ""}${title}.mp3`);
+    }
+    return {
+      url,
+      filename,
+      tags: {
+        title,
+        artist,
+        album,
+        year: yearFrom(release.album_release_date || current.release_date),
+        art: fullArtUrl(release.art_id || current.art_id) || art,
+        num,
+        total: tracks.length,
+      },
+    };
+  }
+
+  // The ISOLATED relay echoes per-request results back tagged with reqId
+  // (see bandcampLoader.global.js); resolves null on failure/timeout, else
+  // { ok, url? } — url is the staged blob for album zip staging.
+  function waitForDownloadResult(reqId, timeoutMs = 90000) {
+    return new Promise((resolve) => {
+      const finish = (result) => {
+        window.removeEventListener("message", onResult);
+        clearTimeout(timer);
+        resolve(result);
+      };
+      const onResult = (event) => {
+        if (
+          event.source === window &&
+          event.data?.type === "dtp-bandcamp-download-result" &&
+          event.data.reqId === reqId
+        ) {
+          finish({
+            ok: Boolean(event.data.ok),
+            url: event.data.url,
+            error: event.data.error,
+          });
+        }
+      };
+      const timer = setTimeout(() => finish(null), timeoutMs);
+      window.addEventListener("message", onResult);
+    });
+  }
+
+  // Byte-progress pings from the offscreen document (relayed through the
+  // service worker + loader) for the track currently being staged, so the
+  // strip moves within a track instead of jumping per finished track.
+  let activeStage = null;
+  window.addEventListener("message", (event) => {
+    const d = event.data;
+    if (
+      event.source === window &&
+      d?.type === "dtp-bandcamp-stage-progress" &&
+      activeStage &&
+      d.reqId === activeStage.reqId
+    ) {
+      activeStage.loaded = d.loaded;
+      if (d.total) activeStage.total = d.total;
+    }
+  });
+
+  function mkReqId() {
+    return `dtp-dl-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  let downloadBusy = false;
+
+  async function downloadCurrent() {
+    if (downloadBusy) return;
+    const payload = trackDownloadPayload(currentTrack());
+    if (!payload) {
+      console.warn("Bandcamp download unavailable for the current track");
+      bar.setStatus("Download unavailable");
+      return;
+    }
+    downloadBusy = true;
+    bar.setDownloadProgress({ active: true });
+    const reqId = mkReqId();
+    window.postMessage(
+      { type: "dtp-bandcamp-download", reqId, ...payload },
+      "*"
+    );
+    const result = await waitForDownloadResult(reqId);
+    downloadBusy = false;
+    bar.setDownloadProgress({ active: false });
+    if (result && !result.ok) {
+      bar.setStatus("Track download failed");
+    }
+  }
+
+  // Album = whole release as one zip: stage each tagged track in the
+  // offscreen document (no downloads yet), then hand the blob list back
+  // for a single zip download. Progress steps per staged track, then the
+  // button keeps spinning while the zip is built.
+  async function downloadAlbum() {
+    if (downloadBusy) return;
+    const payloads = tracks
+      .map((track) => trackDownloadPayload(track, { folder: true }))
+      .filter(Boolean);
+    if (!payloads.length) {
+      console.warn("Bandcamp album download unavailable: no stream URLs exposed");
+      bar.setStatus("Album download unavailable");
+      return;
+    }
+    downloadBusy = true;
+    const entries = [];
+    let failed = 0;
+    for (let i = 0; i < payloads.length; i++) {
+      const reqId = mkReqId();
+      activeStage = { reqId, loaded: 0, total: 0 };
+      const report = () => {
+        const frac =
+          activeStage.total > 0
+            ? Math.min(1, activeStage.loaded / activeStage.total)
+            : 0;
+        bar.setDownloadProgress({
+          active: true,
+          done: i,
+          total: payloads.length,
+          failed,
+          pct: ((i + frac) / payloads.length) * 100,
+        });
+      };
+      report();
+      window.postMessage(
+        { type: "dtp-bandcamp-stage-mp3", reqId, ...payloads[i] },
+        "*"
+      );
+      const result = await waitForDownloadResult(reqId);
+      activeStage = null;
+      if (result?.ok && result.url) {
+        entries.push({
+          url: result.url,
+          name: payloads[i].filename.split("/").pop(),
+        });
+      } else {
+        failed++;
+        bar.setStatus(`Track ${i + 1} failed: ${result?.error || "timed out"}`);
+      }
+      bar.setDownloadProgress({
+        active: true,
+        done: i + 1,
+        total: payloads.length,
+        failed,
+      });
+    }
+    const album = release.album_title || cleanTabTitle(release.current?.title || "");
+    let ok = false;
+    if (entries.length) {
+      bar.setStatus("Building album zip…");
+      const reqId = mkReqId();
+      window.postMessage(
+        {
+          type: "dtp-bandcamp-download-zip",
+          reqId,
+          filename: `${sanitizeFilename(
+            `${artist ? artist + " - " : ""}${album || "bandcamp"}`
+          )}.zip`,
+          entries,
+          cover: fullArtUrl(release.art_id || release.current?.art_id) || art,
+        },
+        "*"
+      );
+      const result = await waitForDownloadResult(reqId);
+      ok = Boolean(result?.ok);
+    }
+    downloadBusy = false;
+    // Let the 100% fill register before removing the strip.
+    setTimeout(() => bar.setDownloadProgress({ active: false }), 600);
+    bar.setStatus(
+      `Album download finished${
+        entries.length ? (ok ? `: ${album}` : " (zip failed)") : ""
+      }${failed ? ` — ${failed} track(s) skipped` : ""}`
+    );
+  }
+
   function manualStep(dir) {
     const rows = pageTracks();
     if (!rShuffle || !rows.length) {
@@ -233,38 +437,11 @@ export function initReleasePage(albumplayer) {
     },
     onShuffle: () => setReleaseShuffle(!rShuffle),
     onRepeat: () => setReleaseRepeatCycle(),
-    onDownload: () => {
-      const track = currentTrack();
-      const file = track?.file || {};
-      const url = file["mp3-128"] || Object.values(file).find(
-        (value) => typeof value === "string" && value.startsWith("https://")
-      );
-      if (!url) {
-        console.warn("Bandcamp download unavailable for the current track");
-        return;
-      }
-      const title = track.title || "track";
-      const current = release.current || {};
-      window.postMessage(
-        {
-          type: "dtp-bandcamp-download",
-          url,
-          filename: sanitizeFilename(
-            `${artist ? artist + " - " : ""}${title}.mp3`
-          ),
-          tags: {
-            title,
-            artist,
-            album: release.album_title || cleanTabTitle(current.title || ""),
-            year: yearFrom(release.album_release_date || current.release_date),
-            art: fullArtUrl(release.art_id || current.art_id) || art,
-            num: track.track_num || tracks.indexOf(track) + 1,
-            total: tracks.length,
-          },
-        },
-        "*"
-      );
-    },
+    onDownload: downloadCurrent,
+    // Album zip download only makes sense on album pages (not /track/),
+    // and only when the release exposes more than one track.
+    onDownloadAlbum:
+      !singleTrack && tracks.length > 1 ? downloadAlbum : undefined,
   });
   document.body.appendChild(bar.element);
 

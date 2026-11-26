@@ -11,16 +11,45 @@
   const CSS_URL = chrome.runtime.getURL("js/inject/bandcamp/bandcamp-streamer.css");
   const CSS_MARKER = "data-dtp-bandcamp-css";
 
-  // The extension service worker handles privileged downloads.
+  // The extension service worker handles privileged downloads. Messages
+  // carrying a reqId (album zip flow + batch progress) get the full result
+  // echoed back to the page so the sender can step its progress; plain
+  // single downloads stay fire-and-forget.
+  const DOWNLOAD_TYPES = new Set([
+    "dtp-bandcamp-download",
+    "dtp-bandcamp-stage-mp3",
+    "dtp-bandcamp-download-zip",
+  ]);
   window.addEventListener("message", (event) => {
-    if (event.source !== window || event.data?.type !== "dtp-bandcamp-download") {
+    if (event.source !== window || !DOWNLOAD_TYPES.has(event.data?.type)) {
       return;
     }
+    const reqId = event.data.reqId;
     chrome.runtime.sendMessage(event.data).then((result) => {
       if (!result?.ok) throw new Error(result?.error || "No download response");
+      if (reqId) {
+        window.postMessage(
+          { type: "dtp-bandcamp-download-result", reqId, ok: true, url: result.url },
+          "*"
+        );
+      }
     }).catch((err) => {
       console.warn("Bandcamp download failed:", err.message);
+      if (reqId) {
+        window.postMessage(
+          { type: "dtp-bandcamp-download-result", reqId, ok: false, error: err.message },
+          "*"
+        );
+      }
     });
+  });
+
+  // Byte-progress pings for album staging: straight through to the page,
+  // where the download queue matches them against the active reqId.
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === "dtp-bandcamp-stage-progress") {
+      window.postMessage(message, "*");
+    }
   });
 
   // Stylesheet as a plain <link>: does not depend on the dynamic

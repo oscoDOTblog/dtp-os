@@ -41,6 +41,10 @@ const ICONS = {
   repeatOne: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/><path d="M11 10h1v4"/></svg>',
   queue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+  music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  disc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></svg>',
+  // Vinyl with a down arrow: the download button's busy state.
+  vinyl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/><path d="M12 6.5v3"/><path d="m10.2 8.2 1.8 1.8 1.8-1.8"/></svg>',
 };
 
 export function sanitizeFilename(name) {
@@ -65,6 +69,7 @@ export function createPlayerBar({
   onShuffle,
   onRepeat,
   onDownload,
+  onDownloadAlbum,
 } = {}) {
   const prefs = window.prefs || {};
   let curEl, durEl, seekSlider, volSlider;
@@ -177,10 +182,65 @@ export function createPlayerBar({
     if (!queuePanel.hidden) scrollToActive();
   });
   right.appendChild(queueBtn);
-  const downloadBtn = mkBtn(ICONS.download, "Download this track (MP3)", () => {
-    if (typeof onDownload === "function") onDownload();
+  // Download: one button. With both actions available (album pages) it
+  // opens a small menu; with only one it acts directly.
+  const DOWNLOAD_TITLE = "Download";
+  const dlMenu = document.createElement("div");
+  dlMenu.className = "dtp-a-dl-menu";
+  dlMenu.hidden = true;
+  const dlRows = [];
+  const mkDlRow = (icon, title, sub, fn) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "dtp-a-dl-row";
+    const iconEl = document.createElement("span");
+    iconEl.className = "dtp-a-dl-row-icon";
+    iconEl.innerHTML = icon;
+    const text = document.createElement("span");
+    text.className = "dtp-a-dl-row-text";
+    const titleEl = document.createElement("span");
+    titleEl.className = "dtp-a-dl-row-title";
+    titleEl.textContent = title;
+    const subEl = document.createElement("span");
+    subEl.className = "dtp-a-dl-row-sub";
+    subEl.textContent = sub;
+    text.append(titleEl, subEl);
+    row.append(iconEl, text);
+    row.addEventListener("click", () => {
+      dlMenu.hidden = true;
+      if (typeof fn === "function") fn();
+    });
+    dlMenu.appendChild(row);
+    dlRows.push(row);
+  };
+  if (typeof onDownload === "function") {
+    mkDlRow(ICONS.music, "Current track", "MP3 · tagged", onDownload);
+  }
+  if (typeof onDownloadAlbum === "function") {
+    mkDlRow(ICONS.disc, "Whole album", "ZIP · tracks + cover", onDownloadAlbum);
+  }
+  const downloadBtn = mkBtn(ICONS.download, DOWNLOAD_TITLE, () => {
+    if (!dlRows.length) return;
+    if (dlRows.length === 1) {
+      dlRows[0].click();
+      return;
+    }
+    dlMenu.hidden = !dlMenu.hidden;
   });
   right.appendChild(downloadBtn);
+  document.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (
+        !dlMenu.hidden &&
+        !dlMenu.contains(e.target) &&
+        !downloadBtn.contains(e.target)
+      ) {
+        dlMenu.hidden = true;
+      }
+    },
+    true
+  );
   const vol = document.createElement("div");
   vol.className = "dtp-a-vol";
   if (showVolume) {
@@ -242,7 +302,7 @@ export function createPlayerBar({
     if (!queuePanel.hidden) scrollToActive();
   }
 
-  bar.append(meta, center, right, queuePanel);
+  bar.append(meta, center, right, queuePanel, dlMenu);
 
   function setTrack(track) {
     if (!track || !track.title) {
@@ -291,6 +351,59 @@ export function createPlayerBar({
     statusEl.textContent = text;
   }
 
+  // Download feedback: the button spins (record-like) while anything
+  // downloads; with a known total a thin determinate strip runs along the
+  // bar's top edge. Self-contained so backends that never call it are
+  // unaffected.
+  let progressEl = null;
+  let progressFill = null;
+  let progressLabel = null;
+  function ensureProgress() {
+    if (progressEl) return;
+    progressEl = document.createElement("div");
+    progressEl.className = "dtp-a-dl-progress";
+    progressEl.hidden = true;
+    progressFill = document.createElement("div");
+    progressFill.className = "dtp-a-dl-progress-fill";
+    progressEl.appendChild(progressFill);
+    bar.appendChild(progressEl);
+    progressLabel = document.createElement("span");
+    progressLabel.className = "dtp-a-dl-progress-label";
+    progressLabel.hidden = true;
+    bar.appendChild(progressLabel);
+  }
+
+  function setDownloadProgress({ active, done = 0, total = 0, failed = 0, pct } = {}) {
+    const busy = Boolean(active);
+    downloadBtn.classList.toggle("is-busy", busy);
+    downloadBtn.disabled = busy;
+    // Swap the tray icon for the vinyl record while downloading; the
+    // is-busy CSS spins it like a turntable.
+    downloadBtn.innerHTML = busy ? ICONS.vinyl : ICONS.download;
+    ensureProgress();
+    const shown =
+      typeof pct === "number"
+        ? Math.min(100, Math.max(0, Math.round(pct)))
+        : total > 0
+          ? Math.round((done / total) * 100)
+          : 0;
+    progressEl.hidden = !busy || !(total > 0);
+    progressLabel.hidden = !busy || !(total > 0);
+    if (busy) {
+      progressFill.style.width = `${shown}%`;
+      progressLabel.textContent = `${shown}% · ${done}/${total}`;
+      const label = total > 0
+        ? `Downloading… ${shown}% (${done}/${total})${failed ? ` — ${failed} failed` : ""}`
+        : "Downloading…";
+      downloadBtn.title = label;
+      downloadBtn.setAttribute("aria-label", label);
+    } else {
+      progressFill.style.width = "0%";
+      downloadBtn.title = DOWNLOAD_TITLE;
+      downloadBtn.setAttribute("aria-label", DOWNLOAD_TITLE);
+    }
+  }
+
   function setPosition(secs) {
     const cur = Number(secs) || 0;
     curEl.textContent = formatTime(cur);
@@ -317,6 +430,7 @@ export function createPlayerBar({
     element: bar,
     setTrack,
     setStatus,
+    setDownloadProgress,
     setPosition,
     setDuration,
     setPlaying,

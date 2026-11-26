@@ -176,13 +176,15 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     --thumb: #17161a;
 }
 
+/* dtp-os: meta / center / right get equal flex so the transport block sits
+   at true center of the bar regardless of side-column content width. */
 .dtp-a-meta {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     gap: 12px;
-    flex: 0 1 24rem;
+    flex: 1 1 0;
     min-width: 10rem;
 }
 
@@ -294,8 +296,9 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
 .dtp-a-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 12px;
-    flex-shrink: 0;
+    flex: 1 1 0;
 }
 
 .dtp-a-play {
@@ -396,6 +399,140 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
 .dtp-a-vol input[type="range"] {
     width: 5rem;
 }
+
+/* dtp-os: album download feedback. The button spins (record-like) and dims
+   while the batch runs; a thin accent strip on the bar's top edge shows
+   done/total. */
+.dtp-a-btn:disabled {
+    cursor: progress;
+    opacity: 0.75;
+}
+
+.dtp-a-btn.is-busy {
+    color: var(--dtp-accent, #ff1493) !important;
+}
+
+.dtp-a-btn.is-busy svg {
+    animation: dtp-dl-spin 1.2s linear infinite;
+}
+
+@keyframes dtp-dl-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.dtp-a-dl-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.dtp-a-dl-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--dtp-accent, #ff1493);
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px 0 var(--dtp-accent, #ff1493);
+    transition: width 0.25s ease;
+}
+
+.dtp-a-dl-progress-label {
+    position: absolute;
+    top: 5px;
+    right: 16px;
+    font-size: 10px;
+    line-height: 1;
+    color: var(--bar-muted);
+    pointer-events: none;
+    user-select: none;
+}
+
+.dtp-a-dl-progress-label[hidden] {
+    display: none;
+}
+
+/* dtp-os: download menu — current track vs whole album (album pages). */
+.dtp-a-dl-menu {
+    position: absolute;
+    right: 8px;
+    bottom: 88px;
+    width: 220px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bar-bg);
+    border: 1px solid var(--bar-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    z-index: 1;
+}
+
+.dtp-a-dl-menu[hidden] {
+    display: none;
+}
+
+.dtp-a-dl-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: none !important;
+    border-radius: 6px;
+    background: transparent !important;
+    color: var(--bar-fg) !important;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dtp-a-dl-row:hover {
+    background: var(--bar-hover) !important;
+}
+
+.dtp-a-dl-row-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--bar-muted);
+}
+
+.dtp-a-dl-row:hover .dtp-a-dl-row-icon {
+    color: var(--dtp-accent, #ff1493);
+}
+
+.dtp-a-dl-row-icon svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.dtp-a-dl-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dtp-a-dl-row-title {
+    font-weight: 500;
+    color: var(--bar-fg);
+}
+
+.dtp-a-dl-row-sub {
+    font-size: 11px;
+    color: var(--bar-muted);
+}
+
+
 
 /* Queue panel: upcoming tracks, like the native player's queue. */
 .dtp-a-queue {

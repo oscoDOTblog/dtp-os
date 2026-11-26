@@ -63,3 +63,74 @@ export async function downloadBandcampTrack({ url, filename, tags }, sender) {
   }
   return chrome.downloads.download(options);
 }
+
+function validBlobUrl(url) {
+  return (
+    typeof url === "string" && url.startsWith(`blob:${chrome.runtime.getURL("")}`)
+  );
+}
+
+// Album ZIP flow step 1: tag a track in the offscreen document and keep the
+// staged blob URL around instead of starting a download. The page collects
+// these and hands the full list back via downloadBandcampZip.
+export async function stageBandcampTrack({ url, tags, reqId }, sender) {
+  if (!sender.tab || !isBandcampUrl(sender.url) || !isBandcampUrl(url, true)) {
+    throw new Error("Invalid Bandcamp download source");
+  }
+  await ensureOffscreenPage();
+  const tagged = await chrome.runtime.sendMessage({
+    type: "dtp-bandcamp-tag-mp3",
+    url,
+    keep: true,
+    reqId,
+    tabId: sender.tab.id,
+    tags: { ...tags, art: isBandcampUrl(tags.art, true) ? tags.art : "" },
+  });
+  if (!validBlobUrl(tagged?.url)) {
+    throw new Error(tagged?.error || "No tagged MP3 was generated");
+  }
+  return tagged.url;
+}
+
+// Entry names live inside the zip: flat files only, no traversal.
+function safeEntryName(name) {
+  return typeof name === "string" &&
+    name.length > 0 &&
+    name.length <= 180 &&
+    !/[\\/:]/.test(name) &&
+    name !== "." &&
+    name !== ".."
+    ? name
+    : "";
+}
+
+// Album ZIP flow step 2: hand the staged blob URLs to the offscreen
+// document, which builds one zip blob for a single Chrome download.
+export async function downloadBandcampZip({ filename, entries, cover }, sender) {
+  if (!sender.tab || !isBandcampUrl(sender.url)) {
+    throw new Error("Invalid Bandcamp download source");
+  }
+  const clean = (Array.isArray(entries) ? entries : [])
+    .map((entry) => ({ url: entry?.url, name: safeEntryName(entry?.name) }))
+    .filter((entry) => validBlobUrl(entry.url) && entry.name);
+  if (!clean.length) {
+    throw new Error("No staged tracks to zip");
+  }
+  const coverUrl =
+    typeof cover === "string" && isBandcampUrl(cover, true) ? cover : "";
+  await ensureOffscreenPage();
+  const zipped = await chrome.runtime.sendMessage({
+    type: "dtp-bandcamp-zip-blobs",
+    entries: clean,
+    cover: coverUrl,
+  });
+  if (!validBlobUrl(zipped?.url)) {
+    throw new Error(zipped?.error || "No zip was generated");
+  }
+  return chrome.downloads.download({
+    url: zipped.url,
+    filename:
+      typeof filename === "string" && filename ? filename : "bandcamp.zip",
+    saveAs: false,
+  });
+}

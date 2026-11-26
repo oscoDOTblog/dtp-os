@@ -4,7 +4,7 @@ import { syncEmojiAutocompleteRegistration } from "./js/lib/emojiAutocompleteReg
 import { getEmojiAutocompleteEnabled } from "./js/lib/emojiAutocompleteSettings.js";
 import { syncBandcampStreamerRegistration } from "./js/lib/bandcampStreamerRegistration.js";
 import { getBandcampStreamerEnabled } from "./js/lib/bandcampStreamerSettings.js";
-import { downloadBandcampTrack } from "./js/lib/bandcampDownload.js";
+import { downloadBandcampTrack, stageBandcampTrack, downloadBandcampZip } from "./js/lib/bandcampDownload.js";
 import {
   COPY_SECTION_CSS_FILE,
   COPY_SECTION_ENGINE_FILE,
@@ -164,6 +164,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       (err) => sendResponse({ ok: false, error: err.message })
     );
     return true;
+  }
+
+  // Album ZIP flow: stage one tagged track (returns a blob URL, no
+  // download), then zip the staged set into a single download.
+  if (message?.type === "dtp-bandcamp-stage-mp3") {
+    stageBandcampTrack(message, sender).then(
+      (url) => sendResponse({ ok: true, url }),
+      (err) => sendResponse({ ok: false, error: err.message })
+    );
+    return true;
+  }
+
+  if (message?.type === "dtp-bandcamp-download-zip") {
+    downloadBandcampZip(message, sender).then(
+      () => sendResponse({ ok: true }),
+      (err) => sendResponse({ ok: false, error: err.message })
+    );
+    return true;
+  }
+
+  // Byte-progress pings from the offscreen document during album staging,
+  // forwarded to the tab that requested the download.
+  if (message?.type === "dtp-bandcamp-stage-progress") {
+    if (message.tabId) {
+      chrome.tabs.sendMessage(message.tabId, message).catch(() => {});
+    }
+    sendResponse({ ok: true });
+    return;
   }
 
   if (message?.type === "dtp-ping") {

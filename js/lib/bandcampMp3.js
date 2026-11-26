@@ -137,15 +137,63 @@ function cleanInt(value) {
 }
 
 
-async function createTaggedMp3({ url, tags }) {
-  const audio = await fetch(url, { credentials: "omit" });
-  if (!audio.ok) throw new Error(`Audio fetch failed with HTTP ${audio.status}`);
-  const audioBytes = stripId3(new Uint8Array(await audio.arrayBuffer()));
+// Streams the audio with byte-progress posts (album staging) so the page
+// can show per-track progress, and aborts if the stream stalls.
+async function fetchAudioWithProgress(url, { reqId, tabId }, timeoutMs = 60000) {
+  const res = await fetch(url, {
+    credentials: "omit",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`Audio fetch failed with HTTP ${res.status}`);
+  if (!res.body) return new Uint8Array(await res.arrayBuffer());
+  const total = Number(res.headers.get("content-length")) || 0;
+  const reader = res.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  let lastPosted = 0;
+  const post = (force = false) => {
+    if (!reqId || typeof tabId !== "number") return;
+    if (!force && loaded - lastPosted < 131072) return;
+    lastPosted = loaded;
+    try {
+      // Goes page-ward via the service worker; delivery failures are
+      // non-fatal (the progress strip just pauses).
+      chrome.runtime.sendMessage({
+        type: "dtp-bandcamp-stage-progress",
+        tabId,
+        reqId,
+        loaded,
+        total,
+      }).catch(() => {});
+    } catch {}
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    post();
+  }
+  post(true);
+  const bytes = new Uint8Array(loaded);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
+
+async function createTaggedMp3({ url, tags, keep, reqId, tabId }) {
+  const audioBytes = stripId3(await fetchAudioWithProgress(url, { reqId, tabId }));
   let artBytes;
   let mime = "";
   if (tags.art) {
     try {
-      const art = await fetch(tags.art, { credentials: "omit" });
+      const art = await fetch(tags.art, {
+        credentials: "omit",
+        signal: AbortSignal.timeout(15000),
+      });
       if (art.ok) {
         artBytes = new Uint8Array(await art.arrayBuffer());
         mime = sniffImage(artBytes);
@@ -167,21 +215,166 @@ async function createTaggedMp3({ url, tags }) {
   const blobUrl = URL.createObjectURL(
     new Blob([tag, audioBytes], { type: "audio/mpeg" })
   );
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  // Staged tracks (album ZIP flow) are revoked by the zip builder; the
+  // safety timeout only guards against a batch that never completes.
+  setTimeout(() => URL.revokeObjectURL(blobUrl), keep ? 600000 : 60000);
   return blobUrl;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (
-    message?.type !== "dtp-bandcamp-tag-mp3" ||
-    sender.id !== chrome.runtime.id ||
-    sender.tab
-  ) {
-    return;
+// Minimal stored-entry ZIP writer (MP3s are already compressed, so no
+// deflate): local headers + central directory + EOCD, UTF-8 names.
+let crcTable;
+function crc32(bytes) {
+  crcTable ??= (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) {
+    c = crcTable[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
   }
-  createTaggedMp3(message).then(
-    (url) => sendResponse({ url }),
-    (err) => sendResponse({ error: err.message })
-  );
-  return true;
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function dosDateTime(date) {
+  return {
+    time:
+      ((date.getHours() & 0x1f) << 11) |
+      ((date.getMinutes() & 0x3f) << 5) |
+      ((date.getSeconds() >> 1) & 0x1f),
+    day:
+      (((date.getFullYear() - 1980) & 0x7f) << 9) |
+      (((date.getMonth() + 1) & 0x0f) << 5) |
+      (date.getDate() & 0x1f),
+  };
+}
+
+function buildZip(entries) {
+  const stamp = dosDateTime(new Date());
+  const chunks = [];
+  const central = [];
+  const encoder = new TextEncoder();
+  let offset = 0;
+  for (const entry of entries) {
+    const nameBytes = encoder.encode(entry.name);
+    const crc = crc32(entry.bytes);
+    const local = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true); // version needed
+    lv.setUint16(6, 0x0800, true); // UTF-8 names
+    lv.setUint16(8, 0, true); // method: stored
+    lv.setUint16(10, stamp.time, true);
+    lv.setUint16(12, stamp.day, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, entry.bytes.length, true);
+    lv.setUint32(22, entry.bytes.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    local.set(nameBytes, 30);
+    chunks.push(local, entry.bytes);
+    const header = new Uint8Array(46 + nameBytes.length);
+    const hv = new DataView(header.buffer);
+    hv.setUint32(0, 0x02014b50, true);
+    hv.setUint16(4, 20, true); // version made by
+    hv.setUint16(6, 20, true); // version needed
+    hv.setUint16(8, 0x0800, true);
+    hv.setUint16(10, 0, true);
+    hv.setUint16(12, stamp.time, true);
+    hv.setUint16(14, stamp.day, true);
+    hv.setUint32(16, crc, true);
+    hv.setUint32(20, entry.bytes.length, true);
+    hv.setUint32(24, entry.bytes.length, true);
+    hv.setUint16(28, nameBytes.length, true);
+    hv.setUint32(42, offset, true);
+    header.set(nameBytes, 46);
+    central.push(header);
+    offset += local.length + entry.bytes.length;
+  }
+  const centralStart = offset;
+  let centralSize = 0;
+  for (const header of central) {
+    chunks.push(header);
+    centralSize += header.length;
+  }
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, central.length, true);
+  ev.setUint16(10, central.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralStart, true);
+  chunks.push(eocd);
+  return new Blob(chunks, { type: "application/zip" });
+}
+
+async function buildZipFromBlobs(entries, coverUrl) {
+  const decoded = [];
+  try {
+    for (const entry of entries) {
+      const res = await fetch(entry.url);
+      if (!res.ok) throw new Error(`Blob fetch failed with HTTP ${res.status}`);
+      decoded.push({
+        name: entry.name,
+        bytes: new Uint8Array(await res.arrayBuffer()),
+      });
+    }
+    if (coverUrl) {
+      // Album cover rides along as cover.jpg/png; optional — the zip is
+      // still delivered if it can't be fetched.
+      try {
+        const art = await fetch(coverUrl, {
+          credentials: "omit",
+          signal: AbortSignal.timeout(15000),
+        });
+        if (art.ok) {
+          const bytes = new Uint8Array(await art.arrayBuffer());
+          const mime = sniffImage(bytes);
+          if (mime) {
+            decoded.push({
+              name: mime === "image/png" ? "cover.png" : "cover.jpg",
+              bytes,
+            });
+          }
+        }
+      } catch {}
+    }
+    const blobUrl = URL.createObjectURL(buildZip(decoded));
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    return blobUrl;
+  } finally {
+    // Staged tracks are consumed either way on success; on failure the
+    // caller already has nothing to gain from them.
+    for (const entry of entries) {
+      try {
+        URL.revokeObjectURL(entry.url);
+      } catch {}
+    }
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const fromExtension =
+    sender.id === chrome.runtime.id && !sender.tab;
+  if (fromExtension && message?.type === "dtp-bandcamp-tag-mp3") {
+    createTaggedMp3(message).then(
+      (url) => sendResponse({ url }),
+      (err) => sendResponse({ error: err.message })
+    );
+    return true;
+  }
+  if (fromExtension && message?.type === "dtp-bandcamp-zip-blobs") {
+    buildZipFromBlobs(
+      Array.isArray(message.entries) ? message.entries : [],
+      message.cover
+    ).then(
+      (url) => sendResponse({ url }),
+      (err) => sendResponse({ error: err.message })
+    );
+    return true;
+  }
 });
