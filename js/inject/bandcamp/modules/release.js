@@ -16,8 +16,9 @@
  * zero just before the end; repeat-all restarts the release when playback
  * is observed stopping at the end.
  *
- * No volume slider here: Bandcamp's release bundle exposes no volume API
- * (verified against the shipped `tralbum-*` bundle).
+ * No volume API on the release bundle, so the slider drives the page's
+ * underlying <audio> element directly (.volume), re-asserted every poll in
+ * case Bandcamp resets it between tracks.
  */
 
 import { createPlayerBar, formatTime, sanitizeFilename } from "./bar.js";
@@ -159,6 +160,18 @@ export function initReleasePage(albumplayer) {
   function yearFrom(dateStr) {
     const m = /(\d{4})/.exec(dateStr || "");
     return m ? m[1] : "";
+  }
+
+  // The native player exposes no volume API, so drive the page's audio
+  // element(s) directly. Re-asserted every poll: Bandcamp may swap or reset
+  // the element between tracks.
+  let releaseVolume = 1;
+  function applyVolume(value) {
+    releaseVolume = Math.min(1, Math.max(0, Number(value) || 0));
+    for (const audio of document.querySelectorAll("audio")) {
+      audio.volume = releaseVolume;
+    }
+    return releaseVolume;
   }
 
   function fullArtUrl(artId) {
@@ -416,7 +429,8 @@ export function initReleasePage(albumplayer) {
 
   const bar = createPlayerBar({
     idleLabel: "Play this release",
-    showVolume: false,
+    showVolume: true,
+    onVolume: (value) => applyVolume(value),
     onToggle: () => clickNative(".playbutton"),
     onPrev: () => manualStep(-1),
     onNext: () => manualStep(1),
@@ -458,6 +472,7 @@ export function initReleasePage(albumplayer) {
     bar.setPosition(elapsed);
     if (total > 0) bar.setDuration(total);
     bar.setPlaying(playing);
+    applyVolume(releaseVolume);
 
     const rows = pageTracks();
     const order =

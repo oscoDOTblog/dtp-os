@@ -10,6 +10,7 @@ export const BANDCAMP_STREAMER_DEFAULT_PREFS = {
   seekrate: 10,
   accent: "pink",
   theme: "dark",
+  downloadButton: true,
 };
 
 // Same accent tones as dtp-tunes.
@@ -59,24 +60,30 @@ export function getBandcampStreamerPrefs() {
 }
 
 export function setBandcampStreamerPrefs(prefs) {
-  const next = {
-    ...BANDCAMP_STREAMER_DEFAULT_PREFS,
-    ...(prefs || {}),
-  };
-  next.seekrate = Math.min(30, Math.max(1, Number(next.seekrate) || 10));
-  if (!BANDCAMP_STREAMER_ACCENTS[next.accent]) {
-    next.accent = "pink";
-  }
-  if (next.theme !== "light" && next.theme !== "dark") {
-    next.theme = "dark";
-  }
   return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [PREFS_KEY]: next }, () => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
+    read({ [PREFS_KEY]: null }, (items) => {
+      // Merge over the stored prefs before the defaults so partial saves
+      // (e.g. hotkeys from the popup tool) never reset other settings.
+      const next = {
+        ...BANDCAMP_STREAMER_DEFAULT_PREFS,
+        ...((items && items[PREFS_KEY]) || {}),
+        ...(prefs || {}),
+      };
+      next.seekrate = Math.min(30, Math.max(1, Number(next.seekrate) || 10));
+      if (!BANDCAMP_STREAMER_ACCENTS[next.accent]) {
+        next.accent = "pink";
       }
-      resolve(next);
+      if (next.theme !== "light" && next.theme !== "dark") {
+        next.theme = "dark";
+      }
+      next.downloadButton = Boolean(next.downloadButton);
+      chrome.storage.local.set({ [PREFS_KEY]: next }, () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+          return;
+        }
+        resolve(next);
+      });
     });
   });
 }

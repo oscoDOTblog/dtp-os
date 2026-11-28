@@ -182,8 +182,10 @@ export function createPlayerBar({
     if (!queuePanel.hidden) scrollToActive();
   });
   right.appendChild(queueBtn);
-  // Download: one button. With both actions available (album pages) it
-  // opens a small menu; with only one it acts directly.
+  // Download: one button, off by default (Bandcamp tool setting). With both
+  // actions available (album pages) it opens a small menu; with only one it
+  // acts directly.
+  const showDownload = Boolean(prefs.downloadButton);
   const DOWNLOAD_TITLE = "Download";
   const dlMenu = document.createElement("div");
   dlMenu.className = "dtp-a-dl-menu";
@@ -213,34 +215,37 @@ export function createPlayerBar({
     dlMenu.appendChild(row);
     dlRows.push(row);
   };
-  if (typeof onDownload === "function") {
-    mkDlRow(ICONS.music, "Current track", "MP3 · tagged", onDownload);
-  }
-  if (typeof onDownloadAlbum === "function") {
-    mkDlRow(ICONS.disc, "Whole album", "ZIP · tracks + cover", onDownloadAlbum);
-  }
-  const downloadBtn = mkBtn(ICONS.download, DOWNLOAD_TITLE, () => {
-    if (!dlRows.length) return;
-    if (dlRows.length === 1) {
-      dlRows[0].click();
-      return;
+  let downloadBtn = null;
+  if (showDownload) {
+    if (typeof onDownload === "function") {
+      mkDlRow(ICONS.music, "Current track", "MP3 · tagged", onDownload);
     }
-    dlMenu.hidden = !dlMenu.hidden;
-  });
-  right.appendChild(downloadBtn);
-  document.addEventListener(
-    "pointerdown",
-    (e) => {
-      if (
-        !dlMenu.hidden &&
-        !dlMenu.contains(e.target) &&
-        !downloadBtn.contains(e.target)
-      ) {
-        dlMenu.hidden = true;
+    if (typeof onDownloadAlbum === "function") {
+      mkDlRow(ICONS.disc, "Whole album", "ZIP · tracks + cover", onDownloadAlbum);
+    }
+    downloadBtn = mkBtn(ICONS.download, DOWNLOAD_TITLE, () => {
+      if (!dlRows.length) return;
+      if (dlRows.length === 1) {
+        dlRows[0].click();
+        return;
       }
-    },
-    true
-  );
+      dlMenu.hidden = !dlMenu.hidden;
+    });
+    right.appendChild(downloadBtn);
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (
+          !dlMenu.hidden &&
+          !dlMenu.contains(e.target) &&
+          !downloadBtn.contains(e.target)
+        ) {
+          dlMenu.hidden = true;
+        }
+      },
+      true
+    );
+  }
   const vol = document.createElement("div");
   vol.className = "dtp-a-vol";
   if (showVolume) {
@@ -374,6 +379,7 @@ export function createPlayerBar({
   }
 
   function setDownloadProgress({ active, done = 0, total = 0, failed = 0, pct } = {}) {
+    if (!downloadBtn) return;
     const busy = Boolean(active);
     downloadBtn.classList.toggle("is-busy", busy);
     downloadBtn.disabled = busy;

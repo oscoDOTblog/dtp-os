@@ -73,6 +73,7 @@
     seekrate: 10,
     accent: "pink",
     theme: "dark",
+    downloadButton: true,
   };
 
   function inject(prefs) {

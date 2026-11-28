@@ -145,6 +145,7 @@ h2:has(#playlist-header) {
     --play-fg: #0a0a0c;
     --play-hover: #ffffff;
     --thumb: #f5f5f7;
+    --dtp-slider-fill: #ffffff;
     position: fixed;
     left: 0;
     right: 0;
@@ -174,6 +175,7 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     --play-fg: #f7f5f7;
     --play-hover: #2a2a2e;
     --thumb: #17161a;
+    --dtp-slider-fill: #17161a;
 }
 
 /* dtp-os: meta / center / right get equal flex so the transport block sits
@@ -264,7 +266,7 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     border: none !important;
     border-radius: 50%;
     background: transparent !important;
-    color: var(--bar-fg) !important;
+    color: var(--bar-muted) !important;
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
@@ -272,14 +274,24 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     align-items: center;
     justify-content: center;
     padding: 0;
+    transition: color 0.15s ease, background 0.15s ease;
 }
 
 .dtp-a-btn:hover {
-    background: var(--bar-hover);
+    background: var(--bar-hover) !important;
+    color: var(--bar-fg) !important;
 }
 
+/* Active toggles (shuffle/repeat/queue): accent color only, per dtp-tunes
+   IconButton — no tinted background. */
 .dtp-a-btn.is-active {
-    color: var(--dtp-accent, #ff1493);
+    color: var(--dtp-accent, #ff1493) !important;
+    background: transparent !important;
+}
+
+.dtp-a-btn.is-active:hover {
+    background: var(--bar-hover) !important;
+    color: color-mix(in srgb, var(--dtp-accent, #ff1493) 70%, #ffffff) !important;
 }
 
 .dtp-a-btn svg {
@@ -342,6 +354,22 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     width: 10rem;
     flex-shrink: 0;
     justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.dtp-a-vol-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bar-muted);
+    flex-shrink: 0;
+}
+
+.dtp-a-vol-icon svg {
+    width: 16px;
+    height: 16px;
+    display: block;
 }
 
 @media (min-width: 768px) {
@@ -360,7 +388,8 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     }
 }
 
-/* Range sliders: thin track with white fill up to --range-fill, 12px thumb. */
+/* Range sliders: thin track with a white (fg on light) fill up to
+   --range-fill, Spotify-style per dtp-tunes globals.css — never accent. */
 #dtp-player-bar input[type="range"] {
     -webkit-appearance: none !important;
     appearance: none !important;
@@ -368,8 +397,8 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     border-radius: 999px !important;
     background: linear-gradient(
         to right,
-        var(--dtp-accent, #ff1493) 0%,
-        var(--dtp-accent, #ff1493) var(--range-fill, 0%),
+        var(--dtp-slider-fill, #ffffff) 0%,
+        var(--dtp-slider-fill, #ffffff) var(--range-fill, 0%),
         var(--bar-track, #1f1f22) var(--range-fill, 0%),
         var(--bar-track, #1f1f22) 100%
     );
@@ -456,19 +485,21 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     display: none;
 }
 
-/* dtp-os: download menu — current track vs whole album (album pages). */
+/* dtp-os: download menu — matches dtp-tunes ui/Menu.tsx: flat px-3/py-2
+   rows on an elevated panel, no header, muted inline icons, hover fill. */
 .dtp-a-dl-menu {
     position: absolute;
     right: 8px;
     bottom: 88px;
-    width: 220px;
-    padding: 4px;
+    width: 224px;
+    padding: 4px 0;
     display: flex;
     flex-direction: column;
     background: var(--bar-bg);
     border: 1px solid var(--bar-border);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
     z-index: 1;
 }
 
@@ -480,17 +511,18 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     padding: 8px 12px;
     border: none !important;
-    border-radius: 6px;
+    border-radius: 0;
     background: transparent !important;
     color: var(--bar-fg) !important;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.35;
     text-align: left;
     cursor: pointer;
+    transition: background 0.15s ease;
 }
 
 .dtp-a-dl-row:hover {
@@ -501,12 +533,13 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
     color: var(--bar-muted);
+    flex-shrink: 0;
+    transition: color 0.15s ease;
 }
 
 .dtp-a-dl-row:hover .dtp-a-dl-row-icon {
-    color: var(--dtp-accent, #ff1493);
+    color: var(--bar-fg);
 }
 
 .dtp-a-dl-row-icon svg {
@@ -518,12 +551,13 @@ html[data-dtp-player-theme="light"] #dtp-player-bar {
 .dtp-a-dl-row-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     min-width: 0;
 }
 
 .dtp-a-dl-row-title {
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 400;
     color: var(--bar-fg);
 }
 
@@ -636,7 +670,7 @@ html[data-dtp-player-theme="dark"] #collection-player .carousel-player .vol-bg {
 
 html[data-dtp-player-theme="dark"] #collection-player .carousel-player .progress,
 html[data-dtp-player-theme="dark"] #collection-player .carousel-player .vol-amt {
-    background: var(--dtp-accent, #ff1493);
+    background: var(--bar-fg, #f5f5f7);
 }
 
 html[data-dtp-player-theme="dark"] #collection-player .carousel-player .seek-control,

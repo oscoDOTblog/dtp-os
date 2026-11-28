@@ -1,6 +1,8 @@
 import {
   getBandcampStreamerEnabled,
   setBandcampStreamerEnabled,
+  getBandcampStreamerPrefs,
+  setBandcampStreamerPrefs,
 } from "./lib/bandcampStreamerSettings.js";
 
 function syncBandcampStreamerInBackground(enabled) {
@@ -45,7 +47,7 @@ export function createBandcampStreamerSettingsPanel({
   const hint = document.createElement("p");
   hint.className = "settings-section-hint";
   hint.textContent =
-    "Continuous streaming from Bandcamp feeds, collections, wishlists, and artist pages. Refresh open Bandcamp tabs after toggling. Hotkeys are remapped in the popup Bandcamp tool.";
+    "Continuous streaming from Bandcamp feeds, collections, wishlists, and artist pages. Refresh open Bandcamp tabs after toggling. Hotkeys are remapped in the popup Bandcamp tool. The download button can be toggled below.";
 
   const enableRow = document.createElement("label");
   enableRow.className = "branding-enable-row";
@@ -60,10 +62,23 @@ export function createBandcampStreamerSettingsPanel({
 
   enableRow.append(enableInput, enableLabel);
 
+  const downloadRow = document.createElement("label");
+  downloadRow.className = "branding-enable-row";
+
+  const downloadInput = document.createElement("input");
+  downloadInput.type = "checkbox";
+  downloadInput.id = ids.downloadButton || "bandcampStreamerDownloadButton";
+  downloadInput.className = "branding-enable-input";
+
+  const downloadLabel = document.createElement("span");
+  downloadLabel.textContent = "Show download button (MP3 / album ZIP)";
+
+  downloadRow.append(downloadInput, downloadLabel);
+
   const statusEl = document.createElement("p");
   statusEl.className = "tool-form-desc";
 
-  panel.append(heading, hint, enableRow, statusEl);
+  panel.append(heading, hint, enableRow, downloadRow, statusEl);
 
   let isSaving = false;
 
@@ -100,6 +115,38 @@ export function createBandcampStreamerSettingsPanel({
     applyEnabled(enableInput.checked);
   });
 
+  let isSavingPrefs = false;
+
+  downloadInput.addEventListener("change", async () => {
+    if (isSavingPrefs) {
+      downloadInput.checked = !downloadInput.checked;
+      return;
+    }
+    isSavingPrefs = true;
+    downloadInput.disabled = true;
+    try {
+      const prefs = await getBandcampStreamerPrefs();
+      await setBandcampStreamerPrefs({
+        ...prefs,
+        downloadButton: downloadInput.checked,
+      });
+      setStatus?.(
+        downloadInput.checked
+          ? "Download button enabled — refresh open Bandcamp tabs."
+          : "Download button hidden — refresh open Bandcamp tabs."
+      );
+    } catch (err) {
+      downloadInput.checked = !downloadInput.checked;
+      setStatus?.(
+        err?.message || "Could not save Bandcamp Streamer settings.",
+        true
+      );
+    } finally {
+      isSavingPrefs = false;
+      downloadInput.disabled = false;
+    }
+  });
+
   getBandcampStreamerEnabled()
     .then((enabled) => {
       enableInput.checked = enabled;
@@ -108,6 +155,14 @@ export function createBandcampStreamerSettingsPanel({
     .catch(() => {
       enableInput.checked = false;
       setLocalStatus(false);
+    });
+
+  getBandcampStreamerPrefs()
+    .then((prefs) => {
+      downloadInput.checked = Boolean(prefs.downloadButton);
+    })
+    .catch(() => {
+      downloadInput.checked = false;
     });
 
   panel.cleanup = () => {};
@@ -119,6 +174,7 @@ export function mountBandcampStreamerSettingsPanel(container, { setStatus }) {
   const panel = createBandcampStreamerSettingsPanel({
     ids: {
       enabled: "newtabBandcampStreamerEnabled",
+      downloadButton: "newtabBandcampStreamerDownloadButton",
     },
     setStatus,
   });
